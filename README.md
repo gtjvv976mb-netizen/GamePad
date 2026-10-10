@@ -1,3 +1,47 @@
 # GamePad
 
-A game store where you own the copy: buy games with crypto, resell them, and studios earn on every resale.
+A game store where you own the copy. Buy games with crypto, sell them on when you're done, and the studio earns a royalty every time a copy changes hands.
+
+The whole store fits on one screen. Five tabs (left rail on desktop, top bar on phones) switch between Store, Market, Library, Studio and Profile, and a single 3D stage behind them re-stages itself for each one: the selected game floats as a holographic license card, your library fans out like a hand of cards, and the profile shows the controller logo in 3D. The background takes its colors from the selected game's cover.
+
+You can drive it with a real game controller (Gamepad API): d-pad or stick to move, A to buy or confirm, B to go back, X for used copies, LB/RB to switch tabs. On a keyboard: arrows, A or Enter, B or Esc, X, and Q/E or `[`/`]`.
+
+## Run it
+
+```sh
+npm install
+npm run dev          # http://localhost:5173
+npm run build        # production build in dist/
+npm run test:e2e     # Playwright, desktop and phone sizes (builds first: npm run build)
+```
+
+## Preview mode and live mode
+
+- **Live:** a wallet is connected on a test network where the store contract is deployed. Purchases, listings, resales and withdrawals are real transactions on that test network, and ownership is read from the chain.
+- **Preview:** no contract on that network yet, or "Look around without a wallet". Everything works the same, but it's simulated in the browser and labeled "Preview".
+
+Test networks only: Base Sepolia and Sepolia. Mainnet (real money) is deliberately not configured.
+
+To go live on a test network, deploy the contract (see [contracts/README.md](contracts/README.md)), then put its address in `.env`:
+
+```sh
+cp .env.example .env
+# VITE_STORE_ADDRESS_BASE_SEPOLIA=0x...
+```
+
+## Wallets and sign-in
+
+Wallets connect through wagmi and viem: any installed browser wallet (MetaMask, Rabby and others, discovered with EIP-6963) or Coinbase Smart Wallet, which uses a passkey and needs no extension. After connecting, players sign in with Sign-In with Ethereum (EIP-4361), a free signature with no transaction.
+
+## How it's built
+
+- React 19, TypeScript, Vite.
+- 3D: three.js with @react-three/fiber and drei. Custom shaders for the flowing backdrop and the holographic foil; the logo is extruded from the same SVG path as the flat mark. Resolution steps down on slower GPUs, and without WebGL (or with `?no3d`) the stage falls back to CSS.
+- Motion: Motion (Framer Motion) for tab and sheet transitions. Reduced-motion settings are respected.
+- Web3: wagmi 2, viem 2, and the `GamePadStore` ERC-1155 contract in [contracts/](contracts/) with royalty-enforcing resale.
+- Fonts: Big Shoulders Display, Manrope and JetBrains Mono, self-hosted.
+- Cover art and the short cover loops were generated with Higgsfield.
+
+## Deploying the site
+
+`.github/workflows/pages.yml` publishes to GitHub Pages, but only when someone runs it by hand from the Actions tab. Nothing goes public automatically.
