@@ -8,6 +8,7 @@ import { useSession } from "./web3/session";
 import { chainLabel } from "./web3/config";
 import { useNav, usePad } from "./input/nav";
 import { Logo, Seal } from "./ui/Logo";
+import { World } from "./ui/World";
 import { IconLibrary, IconMarket, IconProfile, IconStore, IconStudio } from "./ui/Icons";
 import { StoreView } from "./views/Store";
 import { MarketView } from "./views/Market";
@@ -17,6 +18,7 @@ import { ProfileView } from "./views/Profile";
 import { useNarrow } from "./views/common";
 import { GAMES } from "./data/games";
 import { coverTexture } from "./three/textures";
+import { calm } from "./three/color";
 
 export type Tab = "store" | "market" | "library" | "studio" | "profile";
 const TABS: { id: Tab; label: string; icon: ReactNode }[] = [
@@ -81,6 +83,7 @@ export default function App() {
 
   return (
     <SceneCtx.Provider value={setScene}>
+      <World tint={calm(scene.palette[2])} />
       <Stage scene={scene} />
       <div className="shade" />
       <div className="app" inert={!!store.busy || session.sheetOpen || undefined}>

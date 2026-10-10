@@ -2,7 +2,7 @@ import { Suspense, useMemo, useState, useSyncExternalStore } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { Environment, Lightformer, PerformanceMonitor, Sparkles } from "@react-three/drei";
 import * as THREE from "three";
-import { Backdrop, calm } from "./Backdrop";
+import { calm } from "./color";
 import { Card, CARD_W } from "./Card";
 import { Logo3D, LogoGlow } from "./Logo3D";
 import { Shards } from "./Shards";
@@ -48,10 +48,9 @@ const flatMarkSize = () => {
   return Math.max(4, Math.floor(Math.min(0.34 * w, 460, right - left) / 16)) * 10;
 };
 
-/** No WebGL (or ?no3d): the same composition with CSS, a tilted cover (or the mark) over the palette glow. */
+/** No WebGL (or ?no3d): the same composition with CSS, a tilted cover (or the mark) in a glow of the game's color over the world clip. */
 function FlatStage({ scene }: { scene: Scene }) {
   const markSize = useSyncExternalStore(onResize, flatMarkSize, () => 280);
-  const [a, b] = scene.palette;
   const c = calm(scene.palette[2]);
   const side = scene.kind === "card" ? scene.side : scene.kind === "logo" ? "right" : "center";
   // Studio's generated title card is a canvas: show it as an image, so the flat stage keeps its focal object
@@ -59,7 +58,7 @@ function FlatStage({ scene }: { scene: Scene }) {
     ? scene.src ?? (scene.texture.image instanceof HTMLCanvasElement ? scene.texture.image.toDataURL("image/jpeg", 0.86) : undefined)
     : scene.kind === "hand" ? scene.textures[scene.selected]?.src : undefined, [scene]);
   return (
-    <div className={`stage flat ${side} ${scene.kind === "card" && scene.compact ? "compact" : ""}`} aria-hidden="true" style={{ background: `radial-gradient(60% 70% at ${side === "left" ? "30%" : side === "center" ? "50%" : "70%"} 45%, ${c}55, ${b}66 45%, ${a} 80%), ${a}` }}>
+    <div className={`stage flat ${side} ${scene.kind === "card" && scene.compact ? "compact" : ""}`} aria-hidden="true" style={{ background: `radial-gradient(50% 60% at ${side === "left" ? "30%" : side === "center" ? "50%" : "70%"} 45%, ${c}38, transparent 75%)` }}>
       {src && <img src={src} alt="" />}
       {scene.kind === "logo" && <div className="flat-logo"><Logo size={markSize} /></div>}
     </div>
@@ -71,8 +70,8 @@ function Stage3D({ scene }: { scene: Scene }) {
   const [dpr, setDpr] = useState(Math.min(1.75, window.devicePixelRatio || 1));
   return (
     <div className="stage" aria-hidden="true">
-      <Canvas dpr={dpr} camera={{ position: [0, 0, 6.2], fov: 34 }} gl={{ antialias: true, powerPreference: "high-performance" }}
-        >
+      <Canvas dpr={dpr} camera={{ position: [0, 0, 6.2], fov: 34 }} gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}>
+        {/* transparent canvas: the world clip shows through behind the cards */}
         <PerformanceMonitor onDecline={() => setDpr(d => Math.max(0.75, d - 0.5))} onIncline={() => setDpr(d => Math.min(1.75, window.devicePixelRatio || 1, d + 0.25))} flipflops={3} />
         <Suspense fallback={null}>
           <Contents scene={scene} />
@@ -88,8 +87,7 @@ function Contents({ scene }: { scene: Scene }) {
   // the rail takes 92px on the left, so "centered" means centered over the content, not the window
   const railX = narrow ? 0 : 46 * viewport.width / size.width;
   const accent = useMemo(() => calm(scene.palette[2]), [scene.palette]);
-  const pal = useMemo(() => [scene.palette[0], scene.palette[1], accent] as [string, string, string], [scene.palette, accent]);
-  // Where the hero object sits, in world units, and the matching backdrop focus in UV.
+  // Where the hero object sits, in world units.
   const layout = useMemo(() => {
     if (narrow) {
       // phones: the card sits above the copy; tabs with long lists shrink it to make room
@@ -112,11 +110,9 @@ function Contents({ scene }: { scene: Scene }) {
     }
     return { x, y: viewport.height * 0.07, s, rot: [0.05, ry, side === "right" ? 0.02 : -0.02] as [number, number, number] };
   }, [narrow, viewport.width, viewport.height, size.width, scene]);
-  const focus: [number, number] = [0.5 + layout.x / viewport.width, 0.5 + layout.y / viewport.height];
 
   return (
     <>
-      <Backdrop palette={pal} focus={focus} />
       <ambientLight intensity={0.35} />
       <directionalLight position={[3, 4, 5]} intensity={1.6} />
       {/* procedural studio lighting for reflections; no HDR download */}

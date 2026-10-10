@@ -1,6 +1,6 @@
 /* GamePad: a console home screen for games you own.
-   One screen, no page scroll. A persistent 3D stage sits behind everything and takes its
-   color from the selected game; the UI is monochrome ink on top, and the only "brand color"
+   One screen, no page scroll. A looping clip of floating game worlds sits behind everything,
+   tinted by the selected game, with a persistent 3D stage over it; the UI is monochrome ink on top, and the only "brand color"
    is holographic foil, used for the mark, the active tab, ownership and the main action. */
 
 :root {
@@ -22,8 +22,8 @@
   --r-chip: 6px;
   --r-tile: 12px;
   --r-plate: 20px;
-  /* layers: stage < shade < app < sheet < busy < toast; inside the app, the skip button sits over the rail */
-  --z-stage: 0; --z-shade: 1; --z-app: 2; --z-sheet: 20; --z-busy: 25; --z-toast: 30; --z-skip: 3;
+  /* layers: world < stage < shade < app < sheet < busy < toast; inside the app, the skip button sits over the rail */
+  --z-world: 0; --z-stage: 1; --z-shade: 2; --z-app: 3; --z-sheet: 20; --z-busy: 25; --z-toast: 30; --z-skip: 3;
   --rail: 92px;
   --ease: cubic-bezier(.2, .8, .2, 1);
   color-scheme: dark;
@@ -39,6 +39,13 @@ button { cursor: pointer; }
 .mono { font-family: var(--mono); font-feature-settings: "zero" 1; }
 .dim { color: var(--dim); }
 p, .sub, .opt small, .legend, .empty span, .busy .card span { text-wrap: pretty; }
+
+/* ---------- world: the clip behind everything ---------- */
+.world { position: fixed; inset: 0; z-index: var(--z-world); overflow: hidden; background: var(--bg); }
+.world video, .world img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+/* the selected game's color washes softly over the clip, so each cover still sets the mood */
+.world .tint { position: absolute; inset: 0; background-color: var(--tint); mix-blend-mode: soft-light; opacity: .5; transition: background-color .9s var(--ease); }
+.world::after { content: ""; position: absolute; inset: 0; background: radial-gradient(120% 95% at 62% 42%, transparent 50%, rgba(8,7,6,.7)); }
 
 /* ---------- 3D layer ---------- */
 .stage { position: fixed; inset: 0; z-index: var(--z-stage); }
