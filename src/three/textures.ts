@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { CONTROLLER_PATH, DPAD_PATH, FOIL } from "../ui/Logo";
+import { FOIL_CELLS, MARK_BODY, MARK_RING } from "../ui/Logo";
 import { coverUrl, type Game } from "../data/games";
 import { reducedMotion } from "../lib/motion";
 
@@ -67,7 +67,7 @@ export function titleTexture(title: string, palette: [string, string, string]): 
   return t;
 }
 
-/** Back of every license card: the mark, centered on graphite. */
+/** Back of every license card: the pixel mark, centered on graphite, the seal in foil. */
 let back: THREE.Texture | null = null;
 export function backTexture(): THREE.Texture {
   if (back) return back;
@@ -77,14 +77,17 @@ export function backTexture(): THREE.Texture {
   x.fillStyle = "#0e0d0b"; x.fillRect(0, 0, 720, 540);
   x.strokeStyle = "rgba(243,241,234,.08)"; x.lineWidth = 2;
   for (let i = -540; i < 720; i += 28) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i + 540, 540); x.stroke(); }
-  x.save(); x.translate(360 - 64 * 3, 270 - 20 * 3 - 30); x.scale(6, 6);
-  x.fillStyle = "#f3f1ea"; x.fill(new Path2D(CONTROLLER_PATH));
-  x.fillStyle = "#0e0d0b"; x.fill(new Path2D(DPAD_PATH));
-  x.translate(46, 19.5);
-  // the gem in foil, as on the mark
-  const fg = x.createLinearGradient(-4.5, -4.5, 4.5, 4.5);
-  FOIL.forEach((c, i) => fg.addColorStop([0, .35, .65, 1][i], c));
-  x.fillStyle = fg; x.fill(new Path2D("M0-9 9 0 0 9-9 0z"));
+  // 24 texels per pixel at a whole-texel offset, so every cell edge is sharp: 384 x 240, centered over the label
+  const CELL = 24, X0 = 360 - 8 * CELL, Y0 = 168;
+  x.save(); x.translate(X0, Y0); x.scale(CELL, CELL);
+  // the ground shows through the D-pad and the empty button cells, as on the flat mark
+  x.fillStyle = "#f3f1ea"; x.fill(new Path2D(MARK_BODY), "evenodd");
+  FOIL_CELLS.forEach((f, k) => {
+    const [cx, cy] = MARK_RING[2 * k];
+    const g = x.createLinearGradient(cx, cy + 1, cx + 1, cy); // lower left to upper right
+    f.stops.forEach(([o, col]) => g.addColorStop(o, col));
+    x.fillStyle = g; x.fillRect(cx, cy, 1, 1);
+  });
   x.restore();
   x.fillStyle = "rgba(243,241,234,.7)"; x.textAlign = "center";
   x.font = "600 22px 'JetBrains Mono Variable', monospace";

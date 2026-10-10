@@ -33,8 +33,8 @@ const foilFrag = /* glsl */ `
     gl_FragColor = vec4(c, a);
   }`;
 
-/** The foil sheen as a material; the 3D logo's gem wears it too. */
-export const makeFoil = (strength = 0.9) => new THREE.ShaderMaterial({
+/** The foil sheen as a material, one per card. */
+const makeFoil = (strength = 0.9) => new THREE.ShaderMaterial({
   vertexShader: foilVert, fragmentShader: foilFrag, transparent: true, depthWrite: false,
   blending: THREE.AdditiveBlending, uniforms: { uTime: { value: 0 }, uStrength: { value: strength } },
 });

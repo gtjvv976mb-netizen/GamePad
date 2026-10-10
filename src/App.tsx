@@ -7,7 +7,7 @@ import { useCatalog } from "./state/catalog";
 import { useSession } from "./web3/session";
 import { chainLabel } from "./web3/config";
 import { useNav, usePad } from "./input/nav";
-import { Gem, Logo } from "./ui/Logo";
+import { Logo, Seal } from "./ui/Logo";
 import { IconLibrary, IconMarket, IconProfile, IconStore, IconStudio } from "./ui/Icons";
 import { StoreView } from "./views/Store";
 import { MarketView } from "./views/Market";
@@ -86,7 +86,7 @@ export default function App() {
       <div className="app" inert={!!store.busy || session.sheetOpen || undefined}>
         <button className="btn sm skip" onClick={() => document.getElementById("main")?.focus()}>Skip to content</button>
         <nav className="rail" aria-label="GamePad">
-          <button className="home" onClick={() => go("store")} aria-label="GamePad home"><Logo size={30} /></button>
+          <HomeMark onClick={() => go("store")} />
           {pad && <span className="pad-hint" title={pad}>LB</span>}
           <div className="tabs" role="tablist" aria-orientation={narrow ? "horizontal" : "vertical"} onKeyDown={onTabKey}>
             {TABS.map(t => (
@@ -132,6 +132,22 @@ export default function App() {
   );
 }
 
+/**
+ * The home mark on the rail. Pointing at it, or reaching it with the keyboard, turns its seal a quarter, one step,
+ * no tween. The state lives here, so only this button re-renders, not the app and its 3D stage.
+ */
+function HomeMark({ onClick }: { onClick: () => void }) {
+  const [hover, setHover] = useState(false);
+  const [keyed, setKeyed] = useState(false);
+  return (
+    <button className="home" onClick={onClick} aria-label="GamePad home"
+      onPointerEnter={() => setHover(true)} onPointerLeave={() => setHover(false)}
+      onFocus={e => setKeyed(e.currentTarget.matches(":focus-visible"))} onBlur={() => setKeyed(false)}>
+      <Logo size={30} turn={hover || keyed ? 1 : 0} />
+    </button>
+  );
+}
+
 /** One tab's view. While it fades out it is inert, so clicks, focus and screen readers only reach the view coming in. */
 function View({ children }: { children: ReactNode }) {
   const present = useIsPresent();
@@ -153,7 +169,7 @@ function BusyCard({ label, live }: { label: string; live: boolean }) {
   }, []);
   return (
     <div className="card" tabIndex={-1} ref={ref}>
-      <Gem />
+      <Seal size={40} spin />
       <b>{label}…</b>
       <span>{live ? "Confirm in your wallet, then wait for the network." : "Preview mode: simulated, no real transaction."}</span>
     </div>

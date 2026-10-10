@@ -9,7 +9,7 @@ export const IconStore = () => <I d="M4 9h16l-1.2 10.2a2 2 0 0 1-2 1.8H7.2a2 2 0
 export const IconMarket = () => <I d="M4 8h13l-3-3M20 16H7l3 3" />;
 export const IconLibrary = () => <I d="M7 4h11a2 2 0 0 1 2 2v11M4 8h11a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8z" />;
 export const IconStudio = () => <I d="M12 3v12m0-12-4 4m4-4 4 4M5 15v3a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3v-3" />;
-export const IconProfile = () => <I d="M12 3l7 7-7 11-7-11 7-7zm-7 7h14" />;
+export const IconProfile = () => <I d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM5 20.5a7 7 0 0 1 14 0" />;
 export const IconLeft = () => <I d="M15 5l-7 7 7 7" size={20} />;
 export const IconRight = () => <I d="M9 5l7 7-7 7" size={20} />;
 export const IconClose = () => <I d="M6 6l12 12M18 6 6 18" size={20} />;

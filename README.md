@@ -36,12 +36,13 @@ Wallets connect through wagmi and viem: any installed browser wallet (MetaMask, 
 ## How it's built
 
 - React 19, TypeScript, Vite.
-- 3D: three.js with @react-three/fiber and drei. Custom shaders for the flowing backdrop and the holographic foil; the logo is extruded from the same SVG path as the flat mark. Resolution steps down on slower GPUs, and without WebGL (or with `?no3d`) the stage falls back to CSS.
+- 3D: three.js with @react-three/fiber and drei. Custom shaders for the flowing backdrop and the holographic foil. Resolution steps down on slower GPUs, and without WebGL (or with `?no3d`) the stage falls back to CSS.
+- The logo is a pixel mark: a controller on a 16 by 10 grid, with two foil cells for the face buttons. The flat mark is an SVG drawn at a whole number of screen pixels per cell, so it stays sharp. In 3D each pixel is a stack of two cubes, and the two foil cubes hop around the hub between the face buttons.
 - Motion: Motion (Framer Motion) for tab and sheet transitions. Reduced-motion settings are respected.
 - Web3: wagmi 2, viem 2, and the `GamePadStore` ERC-1155 contract in [contracts/](contracts/) with royalty-enforcing resale.
 - Fonts: Big Shoulders Display, Manrope and JetBrains Mono, self-hosted.
 - Cover art and the short cover loops (all 16 games) were generated with Higgsfield.
-- Design tokens, the mark and the UI parts are mirrored in the GamePad Brand Board Figma file, on the "GamePad v3 · real app" page.
+- Design tokens and the UI parts are mirrored in the GamePad Brand Board Figma file, on the "GamePad v3 · real app" page; the pixel mark is not there yet.
 
 ## Design check
 
