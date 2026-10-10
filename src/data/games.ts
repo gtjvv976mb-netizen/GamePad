@@ -18,19 +18,19 @@ export type Game = {
 
 const g = (
   slug: string, title: string, studio: string, genre: string, priceEth: number, royaltyPct: number,
-  tags: string[], blurb: string, palette: [string, string, string], loop = false,
+  tags: string[], blurb: string, palette: [string, string, string], loop = true,
 ): Omit<Game, "chainId"> => ({ slug, title, studio, genre, priceEth, royaltyPct, tags, blurb, palette, loop });
 
 export const GAMES: Game[] = [
   g("ndp", "Neon Drift Protocol", "Halfpipe Labs", "Racing", 0.012, 7, ["Arcade", "Multiplayer", "Synthwave"],
     "Thread a hover-car through a city that rewrites its streets every lap. Keep every part you win.",
-    ["#1c0f2e", "#4f255e", "#ff6a52"], true),
+    ["#1c0f2e", "#4f255e", "#ff6a52"]),
   g("hcr", "Hollow Crown", "Gravewright", "RPG", 0.0125, 8, ["Dark fantasy", "Open world", "Story"],
     "A kingless realm, a crown that whispers, and sixty hours of choices that stick.",
-    ["#17171c", "#4a3a44", "#e3a1ad"], true),
+    ["#17171c", "#4a3a44", "#e3a1ad"]),
   g("osv", "Orbital Salvage", "Low Orbit Co.", "Simulation", 0.0062, 6, ["Space", "Physics", "Co-op"],
     "Cut apart derelict stations in zero-g, haul the scrap home, sell what you find.",
-    ["#07080c", "#10233f", "#3f8cff"], true),
+    ["#07080c", "#10233f", "#3f8cff"]),
   g("ptv", "Pixel Tavern", "Mug & Pixel", "Cozy", 0.0041, 5, ["Pixel art", "Management", "Relaxing"],
     "Brew, serve and gossip in a tavern at the crossroads of four kingdoms.",
     ["#24130b", "#482214", "#f08a3a"]),
@@ -42,7 +42,7 @@ export const GAMES: Game[] = [
     ["#3a1830", "#823643", "#ffc75e"]),
   g("eov", "Echoes of Vael", "Quiet Lantern", "Adventure", 0.0082, 7, ["Narrative", "Puzzle", "Atmospheric"],
     "Follow a voice through a drowned archive where every memory is a door.",
-    ["#0b1240", "#4b3a8f", "#b598ff"], true),
+    ["#0b1240", "#4b3a8f", "#b598ff"]),
   g("gla", "Gridlock Arena", "Overclock", "Shooter", 0, 0, ["Free to play", "Arena", "Esports"],
     "Five-minute arena rounds on rotating grid maps. Free to play, skins resell on the market.",
     ["#1a1213", "#ca2651", "#ffa03a"]),
@@ -69,8 +69,11 @@ export const GAMES: Game[] = [
     ["#211735", "#6b4f9a", "#f0c8ff"]),
   g("sws", "Saltwind Sagas", "Harbor Nine", "RPG", 0.0127, 9, ["Open world", "Sailing", "Pirates"],
     "Captain a ship across an archipelago that changes with the tides.",
-    ["#2a120a", "#a8481a", "#ff8a3d"], true),
+    ["#2a120a", "#a8481a", "#ff8a3d"]),
 ].map((x, i) => ({ ...x, chainId: i + 1 }));
+
+/** Palette for scenes that are not a game (logo, studio): graphite and brass. */
+export const HOUSE_PALETTE: [string, string, string] = ["#0e0d0b", "#2b261d", "#e8c37a"];
 
 export const bySlug = (slug: string) => GAMES.find(x => x.slug === slug);
 export const byChainId = (id: number) => GAMES.find(x => x.chainId === id);

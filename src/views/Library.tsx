@@ -8,8 +8,8 @@ import { useNav } from "../input/nav";
 import { eth } from "../lib/format";
 import { useSession } from "../web3/session";
 import { useAct } from "./common";
+import { HOUSE_PALETTE } from "../data/games";
 
-const LOGO_PALETTE: [string, string, string] = ["#0c0c12", "#221c33", "#c9a7ff"];
 const HAND = 7; // cards fanned at once
 
 export function LibraryView({ go, focus }: { go: Go; focus?: string }) {
@@ -29,7 +29,7 @@ export function LibraryView({ go, focus }: { go: Go; focus?: string }) {
   const hand = mine.slice(start, start + HAND);
   const scene = useMemo(() => mine.length
     ? { kind: "hand" as const, textures: hand.map(g => ({ key: g.slug, texture: textureFor(g), src: thumbFor(g) })), selected: cur - start, palette: game!.palette }
-    : { kind: "logo" as const, palette: LOGO_PALETTE },
+    : { kind: "logo" as const, palette: HOUSE_PALETTE },
   [mine.length, hand, cur, start, game]); // eslint-disable-line react-hooks/exhaustive-deps
   useScene(scene);
 

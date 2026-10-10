@@ -1,12 +1,12 @@
 import { useMemo } from "react";
 import type * as THREE from "three";
-import { GAMES, type Game } from "../data/games";
+import { GAMES, HOUSE_PALETTE, type Game } from "../data/games";
 import { useStore, type CustomGame } from "./store";
 import { coverTexture, imageTexture, titleTexture } from "../three/textures";
 
 export type Entry = Game & { custom?: CustomGame };
 
-const PALETTE: [string, string, string] = ["#14121c", "#3a2f5c", "#c9a7ff"];
+const PALETTE = HOUSE_PALETTE;
 
 /** Seed catalog plus anything this wallet published from the Studio tab. */
 export function useCatalog(): Entry[] {

@@ -5,9 +5,10 @@ import { useScene } from "../state/scene";
 import { imageTexture, titleTexture } from "../three/textures";
 import { eth } from "../lib/format";
 import { useAct } from "./common";
+import { HOUSE_PALETTE } from "../data/games";
 
 const GENRES = ["Action", "Adventure", "RPG", "Strategy", "Racing", "Shooter", "Puzzle", "Simulation", "Roguelike", "Cozy", "Horror", "Party"];
-const PALETTE: [string, string, string] = ["#14121c", "#3a2f5c", "#c9a7ff"];
+const PALETTE = HOUSE_PALETTE;
 
 /** Shrink an uploaded cover to the card's 4:3 at 720×540 so it stays light. */
 async function toCover(file: File): Promise<string> {
@@ -64,7 +65,7 @@ export function StudioView({ go }: { go: Go }) {
               <div className="splitbar" aria-hidden="true"><span style={{ width: `${(sale.rest / (p || 1)) * 100}%` }} /><span style={{ width: 0 }} /><span style={{ flex: 1 }} /></div>
               <div className="legend">
                 <span><i style={{ background: "var(--text)" }} />New sale: you get {p ? eth(sale.rest) : "—"}</span>
-                <span><i style={{ background: "#c9a7ff" }} />Each resale at 70%: you get {p ? eth(resale.royalty) : "—"}</span>
+                <span><i style={{ background: HOUSE_PALETTE[2] }} />Each resale at 70%: you get {p ? eth(resale.royalty) : "—"}</span>
                 <span><i style={{ background: "rgba(243,241,234,.3)" }} />GamePad 10%</span>
               </div>
             </div>

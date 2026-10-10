@@ -7,9 +7,9 @@ import { useSession } from "../web3/session";
 import { CHAINS, STORE_ADDRESS, chainName, explorerTx, type ChainId } from "../web3/config";
 import { eth } from "../lib/format";
 import { useAct } from "./common";
+import { HOUSE_PALETTE } from "../data/games";
 import { IconExternal } from "../ui/Icons";
 
-const PALETTE: [string, string, string] = ["#0c0c12", "#221c33", "#c9a7ff"];
 const VERB: Record<Activity["kind"], string> = { buy: "Bought", "bought-used": "Bought used", list: "Listed", cancel: "Cancelled listing", sold: "Sold", withdraw: "Withdrew", publish: "Published" };
 
 export function ProfileView({ go }: { go: Go }) {
@@ -17,7 +17,7 @@ export function ProfileView({ go }: { go: Go }) {
   const store = useStore();
   const catalog = useCatalog();
   const act = useAct();
-  const scene = useMemo(() => ({ kind: "logo" as const, palette: PALETTE }), []);
+  const scene = useMemo(() => ({ kind: "logo" as const, palette: HOUSE_PALETTE }), []);
   useScene(scene);
   const copies = Object.values(store.owned).reduce((a, b) => a + b, 0);
   const name = (id: number) => catalog.find(g => g.chainId === id)?.title ?? `Game #${id}`;

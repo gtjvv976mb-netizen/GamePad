@@ -40,7 +40,19 @@ Wallets connect through wagmi and viem: any installed browser wallet (MetaMask, 
 - Motion: Motion (Framer Motion) for tab and sheet transitions. Reduced-motion settings are respected.
 - Web3: wagmi 2, viem 2, and the `GamePadStore` ERC-1155 contract in [contracts/](contracts/) with royalty-enforcing resale.
 - Fonts: Big Shoulders Display, Manrope and JetBrains Mono, self-hosted.
-- Cover art and the short cover loops were generated with Higgsfield.
+- Cover art and the short cover loops (all 16 games) were generated with Higgsfield.
+- Design tokens, the mark and the UI parts are mirrored in the GamePad Brand Board Figma file, on the "GamePad v3 · real app" page.
+
+## Design check
+
+Every tab is scanned with [Impeccable](https://impeccable.style)'s detector at desktop and phone sizes, against the build served by `npm run preview`:
+
+```sh
+npx impeccable detect --viewport 1440x900 "http://localhost:4173/?no3d#store"
+npx impeccable detect --viewport 390x844 "http://localhost:4173/?no3d#store"
+```
+
+URL scans need Chrome or Chromium (set `IMPECCABLE_BROWSER` to its path if it isn't found).
 
 ## Deploying the site
 
