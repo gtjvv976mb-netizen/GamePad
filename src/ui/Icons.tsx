@@ -1,5 +1,6 @@
+// Every glyph renders a 1.75px stroke whatever its size.
 const I = ({ d, size = 22 }: { d: string; size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={(1.75 * 24) / size} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d={d} />
   </svg>
 );
@@ -12,5 +13,7 @@ export const IconProfile = () => <I d="M12 3l7 7-7 11-7-11 7-7zm-7 7h14" />;
 export const IconLeft = () => <I d="M15 5l-7 7 7 7" size={20} />;
 export const IconRight = () => <I d="M9 5l7 7-7 7" size={20} />;
 export const IconClose = () => <I d="M6 6l12 12M18 6 6 18" size={20} />;
-export const IconCheck = () => <I d="M5 12.5l4.5 4.5L19 7.5" size={18} />;
 export const IconExternal = () => <I d="M14 4h6v6m0-6-9 9M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4" size={16} />;
+export const IconWallet = () => <I d="M19 8V6a1 1 0 0 0-1-1H6.5a2.5 2.5 0 0 0 0 5H19a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H6a2 2 0 0 1-2-2V7.5M16 14h.5" />;
+export const IconFingerprint = () => <I d="M4.5 10a8 8 0 0 1 15 0M7 12a5 5 0 0 1 10 0v1.5c0 1.8-.3 3.4-.9 4.8M12 12v2.5c0 2.2-.6 4.1-1.6 5.5M9.5 13.5c0 2.3-.5 4.1-1.4 5.3" />;
+export const IconEye = () => <I d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />;

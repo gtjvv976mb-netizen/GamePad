@@ -2,6 +2,7 @@ import { useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { pointer } from "./pointer";
+import { reducedMotion } from "../lib/motion";
 
 /** Small cut gems (the logo's token) drifting at different depths; nearer ones move more with the pointer. */
 export function Shards({ accent }: { accent: string }) {
@@ -16,22 +17,25 @@ export function Shards({ accent }: { accent: string }) {
     }));
   }, []);
   const mat = useMemo(() => new THREE.MeshPhysicalMaterial({
-    color: "#e9ddff", metalness: 0.3, roughness: 0.08, iridescence: 1, iridescenceIOR: 1.7,
-    iridescenceThicknessRange: [200, 900], clearcoat: 1, flatShading: true, emissive: new THREE.Color(accent), emissiveIntensity: 0.15,
+    color: "#f3f1ea", metalness: 0.3, roughness: 0.08, iridescence: 1, iridescenceIOR: 1.7,
+    iridescenceThicknessRange: [200, 900], clearcoat: 1, flatShading: true, emissive: new THREE.Color(accent), emissiveIntensity: 0.1,
   }), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useFrame((st, dt) => {
-    const t = st.clock.elapsedTime;
+    // Reduce motion: no drift, no spin, no parallax; each gem rests at its own angle.
+    const still = reducedMotion();
+    const t = still ? 0 : st.clock.elapsedTime;
+    const px = still ? 0 : pointer.x, py = still ? 0 : pointer.y;
     (mat.emissive as THREE.Color).lerp(new THREE.Color(accent), 1 - Math.exp(-dt * 2));
     group.current.children.forEach((m, i) => {
       const g = gems[i];
       const depth = (g.z + 2.5) / 3.4; // 0 far .. 1 near
       m.position.set(
-        g.x * viewport.width + pointer.x * 0.35 * depth,
-        g.y * viewport.height + Math.sin(t * 0.4 + g.phase) * 0.12 - pointer.y * 0.25 * depth,
+        g.x * viewport.width + px * 0.35 * depth,
+        g.y * viewport.height + Math.sin(t * 0.4 + g.phase) * 0.12 - py * 0.25 * depth,
         g.z,
       );
-      m.rotation.set(t * g.spin * 0.6, t * g.spin, 0);
+      m.rotation.set(still ? g.phase * 0.6 : t * g.spin * 0.6, still ? g.phase : t * g.spin, 0);
     });
   });
 

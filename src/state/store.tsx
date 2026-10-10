@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { GAMES } from "../data/games";
 
 export type Listing = { id: number; gameId: number; seller: string; priceEth: number; mine: boolean };
@@ -14,11 +14,12 @@ export type StoreApi = {
   activity: Activity[];
   published: CustomGame[];
   busy: string | null;
-  buy(gameId: number, priceEth: number): Promise<void>;
-  list(gameId: number, priceEth: number): Promise<void>;
-  cancel(listingId: number): Promise<void>;
-  buyListing(listing: Listing): Promise<void>;
-  withdraw(): Promise<void>;
+  // live mode resolves with the explorer link for the transaction
+  buy(gameId: number, priceEth: number): Promise<string | void>;
+  list(gameId: number, priceEth: number): Promise<string | void>;
+  cancel(listingId: number): Promise<string | void>;
+  buyListing(listing: Listing): Promise<string | void>;
+  withdraw(): Promise<string | void>;
   publish(g: Omit<CustomGame, "chainId">): Promise<number>;
   reset?(): void;
 };
@@ -66,16 +67,23 @@ const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
 export function PreviewStore({ children }: { children: ReactNode }) {
   const [st, setSt] = useState<PreviewState>(load);
   const [busy, setBusy] = useState<string | null>(null);
+  const busyRef = useRef(false);
 
   useEffect(() => {
     try { localStorage.setItem(KEY, JSON.stringify(st)); } catch { /* ignore */ }
   }, [st]);
 
   const run = useCallback(async (label: string, fn: (s: PreviewState) => PreviewState) => {
+    if (busyRef.current) return; // one transaction at a time
+    busyRef.current = true;
     setBusy(label);
-    await wait(900);
-    setSt(fn);
-    setBusy(null);
+    try {
+      await wait(900);
+      setSt(fn);
+    } finally {
+      busyRef.current = false;
+      setBusy(null);
+    }
   }, []);
 
   const log = (s: PreviewState, a: Omit<Activity, "at">): Activity[] => [{ ...a, at: Date.now() }, ...s.activity].slice(0, 40);

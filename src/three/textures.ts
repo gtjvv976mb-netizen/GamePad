@@ -1,6 +1,7 @@
 import * as THREE from "three";
-import { CONTROLLER_PATH, DPAD_PATH } from "../ui/Logo";
+import { CONTROLLER_PATH, DPAD_PATH, FOIL } from "../ui/Logo";
 import { coverUrl, type Game } from "../data/games";
+import { reducedMotion } from "../lib/motion";
 
 const loader = new THREE.TextureLoader();
 const cache = new Map<string, THREE.Texture>();
@@ -11,8 +12,7 @@ const prep = (t: THREE.Texture) => {
   return t;
 };
 
-export const reducedMotion = () =>
-  typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+export { reducedMotion };
 
 /** Cover texture for a catalog game: the looping clip when it has one, else the still. */
 export function coverTexture(game: Pick<Game, "slug" | "loop">): THREE.Texture {
@@ -74,13 +74,17 @@ export function backTexture(): THREE.Texture {
   const c = document.createElement("canvas");
   c.width = 720; c.height = 540;
   const x = c.getContext("2d")!;
-  x.fillStyle = "#101114"; x.fillRect(0, 0, 720, 540);
+  x.fillStyle = "#0e0d0b"; x.fillRect(0, 0, 720, 540);
   x.strokeStyle = "rgba(243,241,234,.08)"; x.lineWidth = 2;
   for (let i = -540; i < 720; i += 28) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i + 540, 540); x.stroke(); }
   x.save(); x.translate(360 - 64 * 3, 270 - 20 * 3 - 30); x.scale(6, 6);
   x.fillStyle = "#f3f1ea"; x.fill(new Path2D(CONTROLLER_PATH));
-  x.fillStyle = "#101114"; x.fill(new Path2D(DPAD_PATH));
-  x.translate(46, 19.5); x.fillStyle = "#c9a7ff"; x.fill(new Path2D("M0-9 9 0 0 9-9 0z"));
+  x.fillStyle = "#0e0d0b"; x.fill(new Path2D(DPAD_PATH));
+  x.translate(46, 19.5);
+  // the gem in foil, as on the mark
+  const fg = x.createLinearGradient(-4.5, -4.5, 4.5, 4.5);
+  FOIL.forEach((c, i) => fg.addColorStop([0, .35, .65, 1][i], c));
+  x.fillStyle = fg; x.fill(new Path2D("M0-9 9 0 0 9-9 0z"));
   x.restore();
   x.fillStyle = "rgba(243,241,234,.7)"; x.textAlign = "center";
   x.font = "600 22px 'JetBrains Mono Variable', monospace";

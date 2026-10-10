@@ -1,11 +1,10 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useAccount, usePublicClient, useReadContract, useReadContracts, useSwitchChain, useWriteContract } from "wagmi";
 import { formatEther, parseEther, type Address, type Hash } from "viem";
 import { storeAbi } from "./storeAbi";
 import { STORE_ADDRESS, explorerTx, type ChainId } from "./config";
 import { StoreCtx, type Activity, type CustomGame, type Listing, type StoreApi } from "../state/store";
 import { GAMES } from "../data/games";
-import { useToast } from "../ui/Toast";
 
 const SEEDED = GAMES.length;
 const MAX_LISTINGS = 120;
@@ -17,8 +16,8 @@ export function LiveStore({ chainId, children }: { chainId: ChainId; children: R
   const client = usePublicClient({ chainId });
   const { switchChainAsync } = useSwitchChain();
   const { writeContractAsync } = useWriteContract();
-  const toast = useToast();
   const [busy, setBusy] = useState<string | null>(null);
+  const busyRef = useRef(false);
   const actKey = `gamepad-activity-${chainId}-${address?.toLowerCase()}`;
   const [activity, setActivity] = useState<Activity[]>(() => { try { return JSON.parse(localStorage.getItem(actKey) ?? "[]"); } catch { return []; } });
   useEffect(() => { try { localStorage.setItem(actKey, JSON.stringify(activity)); } catch { /* ignore */ } }, [actKey, activity]);
@@ -72,19 +71,23 @@ export function LiveStore({ chainId, children }: { chainId: ChainId; children: R
     return r?.status === "success" ? (r.result as unknown as readonly [Address, bigint])[1] : undefined;
   };
 
+  // The caller toasts the outcome; send hands back the explorer link for its 'View'.
   const send = useCallback(async (label: string, call: () => Promise<Hash>, log?: Omit<Activity, "at" | "tx">) => {
+    if (busyRef.current) return; // one transaction at a time
+    busyRef.current = true;
     setBusy(label);
     try {
       if (walletChain !== chainId) await switchChainAsync({ chainId });
       const hash = await call();
       await client!.waitForTransactionReceipt({ hash });
       if (log) setActivity(a => [{ ...log, at: Date.now(), tx: hash }, ...a].slice(0, 40));
-      toast(`${label} confirmed`, explorerTx(chainId, hash));
       await refresh();
+      return explorerTx(chainId, hash);
     } finally {
+      busyRef.current = false;
       setBusy(null);
     }
-  }, [walletChain, chainId, switchChainAsync, client, toast, refresh]);
+  }, [walletChain, chainId, switchChainAsync, client, refresh]);
 
   const api = useMemo<StoreApi>(() => ({
     mode: "live",
@@ -92,19 +95,19 @@ export function LiveStore({ chainId, children }: { chainId: ChainId; children: R
     owedEth: Number(formatEther(owed ?? 0n)),
     buy: (gameId, priceEth) => {
       const value = priceOf(gameId) ?? parseEther(String(priceEth));
-      return send("Purchase", () => writeContractAsync({ ...base, functionName: "buy", args: [BigInt(gameId)], value }), { kind: "buy", gameId, priceEth: Number(formatEther(value)) });
+      return send("Buying", () => writeContractAsync({ ...base, functionName: "buy", args: [BigInt(gameId)], value }), { kind: "buy", gameId, priceEth: Number(formatEther(value)) });
     },
     list: (gameId, priceEth) => send("Listing", () => writeContractAsync({ ...base, functionName: "list", args: [BigInt(gameId), parseEther(String(priceEth))] }), { kind: "list", gameId, priceEth }),
     cancel: listingId => {
       const l = listings.find(x => x.id === listingId);
-      return send("Cancel", () => writeContractAsync({ ...base, functionName: "cancel", args: [BigInt(listingId)] }), l && { kind: "cancel", gameId: l.gameId, priceEth: l.priceEth });
+      return send("Cancelling", () => writeContractAsync({ ...base, functionName: "cancel", args: [BigInt(listingId)] }), l && { kind: "cancel", gameId: l.gameId, priceEth: l.priceEth });
     },
-    buyListing: l => send("Purchase", () => writeContractAsync({ ...base, functionName: "buyListing", args: [BigInt(l.id)], value: parseEther(String(l.priceEth)) }), { kind: "bought-used", gameId: l.gameId, priceEth: l.priceEth }),
-    withdraw: () => send("Withdrawal", () => writeContractAsync({ ...base, functionName: "withdraw" }), { kind: "withdraw", gameId: 0, priceEth: Number(formatEther(owed ?? 0n)) }),
+    buyListing: l => send("Buying", () => writeContractAsync({ ...base, functionName: "buyListing", args: [BigInt(l.id)], value: parseEther(String(l.priceEth)) }), { kind: "bought-used", gameId: l.gameId, priceEth: l.priceEth }),
+    withdraw: () => send("Withdrawing", () => writeContractAsync({ ...base, functionName: "withdraw" }), { kind: "withdraw", gameId: 0, priceEth: Number(formatEther(owed ?? 0n)) }),
     publish: async g => {
       // Metadata goes on-chain as a small data URI. Cover images stay local until IPFS upload is added.
       const uri = `data:application/json;base64,${btoa(unescape(encodeURIComponent(JSON.stringify({ name: g.title, genre: g.genre }))))}`;
-      await send("Publish", () => writeContractAsync({ ...base, functionName: "publishGame", args: [parseEther(String(g.priceEth)), Math.round(g.royaltyPct * 100), uri] }), { kind: "publish", gameId: n + 1, priceEth: g.priceEth });
+      await send("Publishing", () => writeContractAsync({ ...base, functionName: "publishGame", args: [parseEther(String(g.priceEth)), Math.round(g.royaltyPct * 100), uri] }), { kind: "publish", gameId: n + 1, priceEth: g.priceEth });
       return n + 1;
     },
   }), [owned, listings, published, activity, busy, owed, send, writeContractAsync, n]); // eslint-disable-line react-hooks/exhaustive-deps

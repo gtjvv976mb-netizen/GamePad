@@ -1,18 +1,20 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { AnimatePresence, motion, useIsPresent } from "motion/react";
 import { Stage, type Scene } from "./three/Stage";
 import { SceneCtx } from "./state/scene";
 import { useStore } from "./state/store";
+import { useCatalog } from "./state/catalog";
 import { useSession } from "./web3/session";
-import { chainName } from "./web3/config";
+import { chainLabel } from "./web3/config";
 import { useNav, usePad } from "./input/nav";
-import { Logo } from "./ui/Logo";
+import { Gem, Logo } from "./ui/Logo";
 import { IconLibrary, IconMarket, IconProfile, IconStore, IconStudio } from "./ui/Icons";
 import { StoreView } from "./views/Store";
 import { MarketView } from "./views/Market";
 import { LibraryView } from "./views/Library";
 import { StudioView } from "./views/Studio";
 import { ProfileView } from "./views/Profile";
+import { useNarrow } from "./views/common";
 import { GAMES } from "./data/games";
 import { coverTexture } from "./three/textures";
 
@@ -36,6 +38,8 @@ export default function App() {
   const pad = usePad();
   const session = useSession();
   const store = useStore();
+  const catalog = useCatalog();
+  const narrow = useNarrow();
 
   useEffect(() => {
     const on = () => setTab(fromHash());
@@ -54,62 +58,114 @@ export default function App() {
     if (a === "prevTab") go(TABS[(i + TABS.length - 1) % TABS.length].id);
     else if (a === "nextTab") go(TABS[(i + 1) % TABS.length].id);
   });
+  // While a transaction runs, every pad and key action stops here.
+  useNav(() => true, !!store.busy);
 
-  const accent = scene.palette[2];
-  useEffect(() => { document.documentElement.style.setProperty("--accent", accent); }, [accent]);
+  // Arrow keys along the tab list (up/down on the rail, left/right on the phone bar), Home and End.
+  const onTabKey = (e: KeyboardEvent) => {
+    const [prev, next] = narrow ? ["ArrowLeft", "ArrowRight"] : ["ArrowUp", "ArrowDown"];
+    const i = TABS.findIndex(t => t.id === tab), n = TABS.length;
+    const j = e.key === prev ? (i + n - 1) % n : e.key === next ? (i + 1) % n : e.key === "Home" ? 0 : e.key === "End" ? n - 1 : -1;
+    if (j < 0) return;
+    e.preventDefault();
+    e.stopPropagation(); // keep it from the view's own arrow handling
+    go(TABS[j].id);
+    requestAnimationFrame(() => document.getElementById(`tab-${TABS[j].id}`)?.focus());
+  };
+
+  // Signed out, the empty Library and Profile carry their own Connect wallet button.
+  const hasGames = catalog.some(g => (store.owned[g.chainId] ?? 0) > 0);
+  const ownCta = !session.address && !session.guest && (tab === "profile" || (tab === "library" && !hasGames));
+  const [netA, netB] = chainLabel(session.chainId);
+  const label = TABS.find(t => t.id === tab)!.label;
 
   return (
     <SceneCtx.Provider value={setScene}>
       <Stage scene={scene} />
       <div className="shade" />
-      <div className="app">
+      <div className="app" inert={!!store.busy || session.sheetOpen || undefined}>
+        <button className="btn sm skip" onClick={() => document.getElementById("main")?.focus()}>Skip to content</button>
         <nav className="rail" aria-label="GamePad">
           <button className="home" onClick={() => go("store")} aria-label="GamePad home"><Logo size={30} /></button>
           {pad && <span className="pad-hint" title={pad}>LB</span>}
-          <div className="tabs" role="tablist" aria-orientation="vertical">
+          <div className="tabs" role="tablist" aria-orientation={narrow ? "horizontal" : "vertical"} onKeyDown={onTabKey}>
             {TABS.map(t => (
-              <button key={t.id} role="tab" className="tab" aria-selected={tab === t.id} aria-controls="view" id={`tab-${t.id}`} onClick={() => go(t.id)}>
+              <button key={t.id} role="tab" className="tab" aria-selected={tab === t.id} aria-controls="view" id={`tab-${t.id}`}
+                tabIndex={tab === t.id ? 0 : -1} onClick={() => go(t.id)}>
+                {tab === t.id && <motion.i layoutId="tab-mark" className="tab-mark" aria-hidden="true" transition={{ type: "spring", stiffness: 520, damping: 40 }} />}
                 {t.icon}{t.label}
               </button>
             ))}
           </div>
           {pad && <span className="pad-hint">RB</span>}
           <div className="spacer" />
-          <div className="net">{session.address ? <><b>{chainName(session.chainId).replace(" Sepolia", "")}</b>Sepolia</> : session.guest ? <><b>Guest</b>preview</> : null}</div>
+          {session.address && <div className="net"><b>{netA}</b>{netB}</div>}
         </nav>
-        <AnimatePresence mode="wait">
-          <motion.main key={tab} id="view" role="tabpanel" aria-labelledby={`tab-${tab}`} className="view"
-            initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={{ duration: .28, ease: [.2, .8, .2, 1] }}>
-            {tab === "store" && <StoreView go={go} focus={focus} />}
-            {tab === "market" && <MarketView go={go} focus={focus} />}
-            {tab === "library" && <LibraryView go={go} focus={focus} />}
-            {tab === "studio" && <StudioView go={go} />}
-            {tab === "profile" && <ProfileView go={go} />}
-          </motion.main>
-        </AnimatePresence>
+        <div className="col">
+          <TopBar go={go} connect={!ownCta} />
+          <main id="main" className="stack" tabIndex={-1}>
+            {/* one tab panel that stays put; inside it the old view fades out while the new one slides in */}
+            <div id="view" role="tabpanel" aria-labelledby={`tab-${tab}`} className="stack">
+              <AnimatePresence>
+                <View key={tab}>
+                  {(tab === "market" || tab === "studio" || tab === "profile") && <h1 className="sr">{label}</h1>}
+                  {tab === "store" && <StoreView go={go} focus={focus} />}
+                  {tab === "market" && <MarketView go={go} focus={focus} />}
+                  {tab === "library" && <LibraryView go={go} focus={focus} />}
+                  {tab === "studio" && <StudioView go={go} />}
+                  {tab === "profile" && <ProfileView />}
+                </View>
+              </AnimatePresence>
+            </div>
+          </main>
+        </div>
       </div>
       <AnimatePresence>
         {store.busy && (
-          <motion.div className="busy" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} role="alertdialog" aria-live="assertive" aria-label={store.busy}>
-            <div className="card">
-              <div className="spin" />
-              <b>{store.busy}…</b>
-              <span style={{ color: "var(--dim)", fontSize: 13 }}>{store.mode === "live" ? "Confirm in your wallet, then wait for the network." : "Preview mode: simulated, no real transaction."}</span>
-            </div>
+          <motion.div className="busy" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <BusyCard label={store.busy} live={store.mode === "live"} />
           </motion.div>
         )}
       </AnimatePresence>
+      <p className="sr" role="status" aria-live="polite">{store.busy ? `${store.busy}…` : ""}</p>
     </SceneCtx.Provider>
   );
 }
 
-/** Top bar shared by every tab: where you are, preview/live, and the wallet. */
-export function TopBar({ crumb }: { crumb: string }) {
+/** One tab's view. While it fades out it is inert, so clicks, focus and screen readers only reach the view coming in. */
+function View({ children }: { children: ReactNode }) {
+  const present = useIsPresent();
+  return (
+    <motion.div className="view" inert={!present || undefined}
+      initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, transition: { duration: .14 } }} transition={{ duration: .28, ease: [.2, .8, .2, 1] }}>
+      {children}
+    </motion.div>
+  );
+}
+
+/** A transaction in flight. It holds focus so nothing behind it can be pressed again, then hands focus back. */
+function BusyCard({ label, live }: { label: string; live: boolean }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const prev = document.activeElement as HTMLElement | null;
+    ref.current?.focus();
+    return () => { if (prev?.isConnected && prev !== ref.current) prev.focus(); };
+  }, []);
+  return (
+    <div className="card" tabIndex={-1} ref={ref}>
+      <Gem />
+      <b>{label}…</b>
+      <span>{live ? "Confirm in your wallet, then wait for the network." : "Preview mode: simulated, no real transaction."}</span>
+    </div>
+  );
+}
+
+/** Top bar over every tab: preview or live, and the wallet. */
+function TopBar({ go, connect }: { go: Go; connect: boolean }) {
   const s = useSession();
   const store = useStore();
   return (
     <header className="topbar">
-      <span className="crumb">{crumb}</span>
       <span className="grow" />
       {(s.address || s.guest) && (
         <span className={`mode ${store.mode === "live" ? "live" : ""}`} title={store.mode === "live" ? "Real transactions on a test network" : "Purchases are simulated in this browser"}>
@@ -117,8 +173,8 @@ export function TopBar({ crumb }: { crumb: string }) {
         </span>
       )}
       {s.address
-        ? <button className="btn sm" onClick={() => location.hash = "#profile"}><span className="mono">{s.address.slice(0, 6)}…{s.address.slice(-4)}</span></button>
-        : <button className="btn sm primary" onClick={s.open}>{s.guest ? "Connect wallet" : "Connect"}</button>}
+        ? <button className="btn sm" onClick={() => go("profile")}><span className="mono">{s.address.slice(0, 6)}…{s.address.slice(-4)}</span></button>
+        : connect && <button className="btn sm primary" onClick={s.open}>Connect wallet</button>}
     </header>
   );
 }

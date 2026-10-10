@@ -1,17 +1,19 @@
-import { useMemo, useRef, useState } from "react";
-import { TopBar, type Go } from "../App";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { Go } from "../App";
 import { useStore, split } from "../state/store";
 import { useCatalog, textureFor, thumbFor, type Entry } from "../state/catalog";
 import { useScene } from "../state/scene";
 import { useNav } from "../input/nav";
 import { eth, short } from "../lib/format";
+import { Eth } from "../ui/Eth";
 import { IconLeft, IconRight } from "../ui/Icons";
-import { isNarrow, useAct, useFit } from "./common";
+import { useAct, useFit, useNarrow } from "./common";
 
 export function MarketView({ go, focus }: { go: Go; focus?: string }) {
   const store = useStore();
   const catalog = useCatalog();
   const act = useAct();
+  const narrow = useNarrow();
   const [only, setOnly] = useState<string | undefined>(focus);
   const byId = useMemo(() => new Map(catalog.map(g => [g.chainId, g])), [catalog]);
   const rows = useMemo(() => store.listings
@@ -20,8 +22,8 @@ export function MarketView({ go, focus }: { go: Go; focus?: string }) {
     .sort((a, b) => (b.l.mine ? 1 : 0) - (a.l.mine ? 1 : 0) || a.l.priceEth / (a.g.priceEth || 1) - b.l.priceEth / (b.g.priceEth || 1)),
   [store.listings, byId, only]);
 
-  const listRef = useRef<HTMLDivElement>(null);
-  const per = useFit(listRef, isNarrow() ? 52 : 58, 0, "y", 2, 9);
+  const listRef = useRef<HTMLUListElement>(null);
+  const per = useFit(listRef, "y", 2, 9, narrow);
   const [sel, setSel] = useState(0);
   const cur = Math.min(sel, Math.max(0, rows.length - 1));
   const page = Math.floor(cur / per);
@@ -30,6 +32,10 @@ export function MarketView({ go, focus }: { go: Go; focus?: string }) {
 
   const scene = useMemo(() => ({ kind: "card" as const, texture: textureFor(focusGame), src: thumbFor(focusGame), key: focusGame.slug, palette: focusGame.palette, side: "left" as const, compact: true }), [focusGame]);
   useScene(scene);
+
+  // Passing over rows on the way to a button is not a choice: only a pointer that rests selects.
+  const hover = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(hover.current), []);
 
   const buy = (i: number) => {
     const r = rows[i];
@@ -53,37 +59,40 @@ export function MarketView({ go, focus }: { go: Go; focus?: string }) {
 
   return (
     <>
-      <TopBar crumb="Market · used copies from players" />
       <div className="split">
-        <div className="spacer-3d" style={{ alignSelf: "end" }}>
-          {r && cut && (
-            <dl className="facts" style={{ marginBottom: 0 }}>
-              <div className="fact"><dt>Seller gets</dt><dd>{eth(cut.rest)}</dd></div>
-              <div className="fact"><dt>{r.g.studio} gets</dt><dd>{eth(cut.royalty)}</dd></div>
-              <div className="fact"><dt>Vs. new</dt><dd>{r.g.priceEth ? `−${Math.round((1 - r.l.priceEth / r.g.priceEth) * 100)}%` : "—"}</dd></div>
-            </dl>
-          )}
-        </div>
-        <section className="panel" aria-labelledby="mk-h" style={{ display: "flex", flexDirection: "column", height: "min(100%, 640px)" }}>
+        <div className="spacer-3d" />
+        <section className="panel list" aria-labelledby="mk-h">
           <h2 id="mk-h">{only ? `Used · ${focusGame.title}` : "Used games"}</h2>
           <p className="sub">Every sale pays the studio its royalty before the seller.{only && <> <button className="linkish" onClick={() => { setOnly(undefined); setSel(0); }}>Show all games</button></>}</p>
-          <div ref={listRef} className="rows" style={{ flex: 1, minHeight: 0 }} role="listbox" aria-label="Listings">
-            {rows.length === 0 && <div className="empty" style={{ margin: "24px auto" }}><span style={{ color: "var(--dim)" }}>No used copies listed right now.</span></div>}
+          <p className="sr" aria-live="polite">{r ? `${r.g.title}, ${eth(r.l.priceEth)}, ${r.l.mine ? "listed by you" : `sold by ${short(r.l.seller)}`}` : ""}</p>
+          <ul ref={listRef} className="rows" aria-label="Listings">
+            {rows.length === 0 && <li className="empty"><span className="dim">No used copies listed right now.</span></li>}
             {rows.slice(page * per, page * per + per).map(({ l, g }, k) => {
               const i = page * per + k;
               return (
-                <div key={l.id} className="row" role="option" aria-selected={i === cur} aria-current={i === cur} onMouseEnter={() => setSel(i)} onClick={() => setSel(i)}>
+                <li key={l.id} className="row" aria-current={i === cur || undefined} onClick={() => setSel(i)}
+                  onMouseEnter={() => { window.clearTimeout(hover.current); hover.current = window.setTimeout(() => setSel(i), 220); }}
+                  onMouseLeave={() => window.clearTimeout(hover.current)}>
                   <img src={thumbFor(g)} alt="" />
-                  <span style={{ minWidth: 0 }}>
-                    <span className="rt" style={{ display: "block" }}>{g.title}</span>
-                    <span className="rs" style={{ display: "block" }}>{l.mine ? "Your listing" : short(l.seller)}</span>
+                  <span className="meta">
+                    <span className="rt">{g.title}</span>
+                    <span className="rs">{l.mine ? "Your listing" : short(l.seller)}</span>
                   </span>
-                  <span className="rp">{eth(l.priceEth)}{g.priceEth > 0 && <span className="save">−{Math.round((1 - l.priceEth / g.priceEth) * 100)}%</span>}</span>
-                  <button className={`btn sm ${l.mine ? "" : "primary"}`} onClick={e => { e.stopPropagation(); setSel(i); buy(i); }}>{l.mine ? "Cancel" : "Buy"}</button>
-                </div>
+                  <span className="rp"><Eth v={l.priceEth} col />{g.priceEth > 0 && <span className="save">−{Math.round((1 - l.priceEth / g.priceEth) * 100)}%</span>}</span>
+                  <button className={`btn sm ${i === cur && !l.mine ? "primary" : ""}`} aria-label={`${l.mine ? "Cancel listing" : "Buy"} ${g.title}, ${eth(l.priceEth)}`}
+                    onClick={e => { e.stopPropagation(); setSel(i); buy(i); }}>{l.mine ? "Cancel" : "Buy"}</button>
+                </li>
               );
             })}
-          </div>
+          </ul>
+          {/* where the money goes on the selected copy, and the way to its store page */}
+          {r && cut && (
+            <div className="legend mk-cut">
+              <span>{r.l.mine ? "You get" : "Seller gets"} <b>{eth(cut.rest)}</b></span>
+              <span>{r.g.studio} gets <b>{eth(cut.royalty)}</b> ({r.g.royaltyPct}%)</span>
+              <button className="linkish" onClick={() => go("store", r.g.slug)} aria-label={`Store page for ${r.g.title}`}>Store page</button>
+            </div>
+          )}
           <div className="panel-foot">
             <button className="icon-btn" onClick={() => move((page - 1) * per)} disabled={page === 0} aria-label="Previous page"><IconLeft /></button>
             <span className="count">{rows.length} {rows.length === 1 ? "copy" : "copies"} · page {page + 1} of {pages}</span>
@@ -91,9 +100,7 @@ export function MarketView({ go, focus }: { go: Go; focus?: string }) {
           </div>
         </section>
       </div>
-      <div className="actions" style={{ justifyContent: "flex-start" }}>
-        <button className="btn noglyph sm" onClick={() => go("store", focusGame.slug)}>See {focusGame.title} in the store</button>
-      </div>
+      <div />
     </>
   );
 }

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useSyncExternalStore } from "react";
+import { useIsPresent } from "motion/react";
 
 // The whole store can be driven from a real game controller (Gamepad API) or the keyboard.
 // Inputs become a small set of actions that the active tab listens to.
@@ -14,16 +15,21 @@ function emit(a: NavAction) {
   for (let i = handlers.length - 1; i >= 0; i--) if (handlers[i](a) === true) return;
 }
 
-/** Subscribe to controller/keyboard actions. Return true from the handler to stop propagation. */
+/**
+ * Subscribe to controller/keyboard actions. Return true from the handler to stop propagation.
+ * A view (or sheet) that is animating out stops listening at once, so a quick press after
+ * switching tabs only reaches the one coming in.
+ */
 export function useNav(handler: Handler, enabled = true) {
   const ref = useRef(handler);
   ref.current = handler;
+  const present = useIsPresent(); // always true outside AnimatePresence
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || !present) return;
     const h: Handler = a => ref.current(a);
     handlers.push(h);
     return () => { handlers.splice(handlers.indexOf(h), 1); };
-  }, [enabled]);
+  }, [enabled, present]);
 }
 
 /** Name of the connected controller, or null. */

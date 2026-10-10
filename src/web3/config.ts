@@ -27,6 +27,8 @@ export const STORE_ADDRESS: Record<number, Address | undefined> = {
 };
 
 export const chainName = (id?: number) => CHAINS.find(c => c.id === id)?.name ?? "Unsupported network";
+/** Two-line network label for the rail: the chain, then what kind of network it is. */
+export const chainLabel = (id?: number): [string, string] => (id === sepolia.id ? ["Ethereum", "testnet"] : ["Base", "testnet"]);
 export const explorerTx = (chainId: number, hash: string) => {
   const c = CHAINS.find(x => x.id === chainId);
   return c?.blockExplorers?.default.url ? `${c.blockExplorers.default.url}/tx/${hash}` : undefined;

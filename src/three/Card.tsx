@@ -33,6 +33,12 @@ const foilFrag = /* glsl */ `
     gl_FragColor = vec4(c, a);
   }`;
 
+/** The foil sheen as a material; the 3D logo's gem wears it too. */
+export const makeFoil = (strength = 0.9) => new THREE.ShaderMaterial({
+  vertexShader: foilVert, fragmentShader: foilFrag, transparent: true, depthWrite: false,
+  blending: THREE.AdditiveBlending, uniforms: { uTime: { value: 0 }, uStrength: { value: strength } },
+});
+
 type Props = {
   texture: THREE.Texture;
   position?: [number, number, number];
@@ -49,10 +55,7 @@ export function Card({ texture, position = [0, 0, 0], scale = 1, flipKey, alive 
   const group = useRef<THREE.Group>(null!);
   const [shown, setShown] = useState(texture);
   const flip = useRef({ t: 1, swapped: true, next: texture });
-  const foil = useMemo(() => new THREE.ShaderMaterial({
-    vertexShader: foilVert, fragmentShader: foilFrag, transparent: true, depthWrite: false,
-    blending: THREE.AdditiveBlending, uniforms: { uTime: { value: 0 }, uStrength: { value: 0.9 } },
-  }), []);
+  const foil = useMemo(() => makeFoil(), []);
   const back = useMemo(backTexture, []);
   const tilt = useRef({ x: 0, y: 0, z: 0 });
   const target = useRef(new THREE.Vector3(...position));
@@ -60,7 +63,10 @@ export function Card({ texture, position = [0, 0, 0], scale = 1, flipKey, alive 
 
   useEffect(() => {
     if (flipKey === undefined || STILL) { setShown(texture); return; }
-    flip.current = { t: 0, swapped: false, next: texture };
+    // a flip already under way retargets instead of restarting, so a held d-pad still lands each cover
+    const f = flip.current;
+    if (f.t < 1) { f.next = texture; if (f.swapped) setShown(texture); }
+    else flip.current = { t: 0, swapped: false, next: texture };
   }, [flipKey, texture]);
 
   useFrame((state, dt) => {
@@ -88,14 +94,14 @@ export function Card({ texture, position = [0, 0, 0], scale = 1, flipKey, alive 
     g.position.z = THREE.MathUtils.damp(g.position.z, target.current.z, snap, dt);
     const s = THREE.MathUtils.damp(g.scale.x, scale, STILL ? 30 : 4, dt);
     g.scale.setScalar(s);
-    foil.uniforms.uTime.value = t;
+    foil.uniforms.uTime.value = STILL ? 0 : t;
   });
 
   return (
     <group ref={group} position={position}>
       {/* body: dark metal with an iridescent clearcoat so the edges shift color */}
       <RoundedBox args={[CARD_W, CARD_H, CARD_D]} radius={0.06} smoothness={4}>
-        <meshPhysicalMaterial color="#15161a" metalness={0.85} roughness={0.28} clearcoat={1} clearcoatRoughness={0.15}
+        <meshPhysicalMaterial color="#171512" metalness={0.85} roughness={0.28} clearcoat={1} clearcoatRoughness={0.15}
           iridescence={1} iridescenceIOR={1.5} iridescenceThicknessRange={[120, 680]} />
       </RoundedBox>
       <mesh position={[0, 0, CARD_D / 2 + 0.002]}>

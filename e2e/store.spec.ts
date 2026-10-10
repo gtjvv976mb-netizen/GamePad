@@ -71,3 +71,12 @@ test("buying asks for a wallet first", async ({ page }) => {
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
+
+test("no em or en dash anywhere, even for a free game or a zero price", async ({ page }) => {
+  for (let i = 0; i < 6; i++) await page.keyboard.press("ArrowRight");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Gridlock Arena");
+  expect(await page.locator("body").innerText()).not.toMatch(/[—–]/);
+  await page.getByRole("tab", { name: "Studio" }).click();
+  await page.getByLabel("Price (ETH)").fill("0");
+  expect(await page.locator("body").innerText()).not.toMatch(/[—–]/);
+});

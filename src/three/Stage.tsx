@@ -2,10 +2,15 @@ import { Suspense, useMemo, useState } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { Environment, Lightformer, PerformanceMonitor, Sparkles } from "@react-three/drei";
 import * as THREE from "three";
-import { Backdrop } from "./Backdrop";
+import { Backdrop, calm } from "./Backdrop";
 import { Card, CARD_W } from "./Card";
 import { Logo3D } from "./Logo3D";
 import { Shards } from "./Shards";
+import { FOIL, Logo } from "../ui/Logo";
+import { reducedMotion } from "../lib/motion";
+
+// four foil-colored studio lights at the corners, so the gem and card edges pick up every hue
+const FOIL_AT: [number, number, number][] = [[-4, 2.5, 3], [4, 2.5, 3], [4, -2.5, 3], [-4, -2.5, 3]];
 
 export type Scene =
   | { kind: "card"; texture: THREE.Texture; src?: string; key: string; palette: [string, string, string]; side: "right" | "left" | "center"; compact?: boolean }
@@ -24,14 +29,19 @@ export function Stage({ scene }: { scene: Scene }) {
   return <Stage3D scene={scene} />;
 }
 
-/** No WebGL (or ?no3d): the same composition with CSS, a tilted cover over the palette glow. */
+/** No WebGL (or ?no3d): the same composition with CSS, a tilted cover (or the mark) over the palette glow. */
 function FlatStage({ scene }: { scene: Scene }) {
-  const [a, b, c] = scene.palette;
-  const src = scene.kind === "card" ? scene.src : scene.kind === "hand" ? scene.textures[scene.selected]?.src : undefined;
-  const side = scene.kind === "card" ? scene.side : "center";
+  const [a, b] = scene.palette;
+  const c = calm(scene.palette[2]);
+  const side = scene.kind === "card" ? scene.side : scene.kind === "logo" ? "right" : "center";
+  // Studio's generated title card is a canvas: show it as an image, so the flat stage keeps its focal object
+  const src = useMemo(() => scene.kind === "card"
+    ? scene.src ?? (scene.texture.image instanceof HTMLCanvasElement ? scene.texture.image.toDataURL("image/jpeg", 0.86) : undefined)
+    : scene.kind === "hand" ? scene.textures[scene.selected]?.src : undefined, [scene]);
   return (
-    <div className={`stage flat ${side} ${scene.kind === "card" && scene.compact ? "compact" : ""}`} aria-hidden="true" style={{ background: `radial-gradient(60% 70% at ${side === "left" ? "30%" : side === "center" ? "50%" : "70%"} 45%, ${c}88, ${b}66 45%, ${a} 80%), ${a}` }}>
+    <div className={`stage flat ${side} ${scene.kind === "card" && scene.compact ? "compact" : ""}`} aria-hidden="true" style={{ background: `radial-gradient(60% 70% at ${side === "left" ? "30%" : side === "center" ? "50%" : "70%"} 45%, ${c}55, ${b}66 45%, ${a} 80%), ${a}` }}>
       {src && <img src={src} alt="" />}
+      {scene.kind === "logo" && <div className="flat-logo"><Logo size={40} /></div>}
     </div>
   );
 }
@@ -55,6 +65,10 @@ function Stage3D({ scene }: { scene: Scene }) {
 function Contents({ scene }: { scene: Scene }) {
   const { viewport, size } = useThree();
   const narrow = size.width < 820;
+  // the rail takes 92px on the left, so "centered" means centered over the content, not the window
+  const railX = narrow ? 0 : 46 * viewport.width / size.width;
+  const accent = useMemo(() => calm(scene.palette[2]), [scene.palette]);
+  const pal = useMemo(() => [scene.palette[0], scene.palette[1], accent] as [string, string, string], [scene.palette, accent]);
   // Where the hero object sits, in world units, and the matching backdrop focus in UV.
   const layout = useMemo(() => {
     if (narrow) {
@@ -72,15 +86,14 @@ function Contents({ scene }: { scene: Scene }) {
 
   return (
     <>
-      <Backdrop palette={scene.palette} focus={focus} />
+      <Backdrop palette={pal} focus={focus} />
       <ambientLight intensity={0.35} />
       <directionalLight position={[3, 4, 5]} intensity={1.6} />
       {/* procedural studio lighting for reflections; no HDR download */}
       <Environment resolution={256} frames={1}>
         <Lightformer form="rect" intensity={3} position={[0, 4, 3]} scale={[8, 2, 1]} />
-        <Lightformer form="rect" intensity={2} color={scene.palette[2]} position={[-5, 0, 2]} scale={[2, 6, 1]} rotation-y={Math.PI / 2} />
-        <Lightformer form="rect" intensity={2.5} color="#c9a7ff" position={[5, -1, 2]} scale={[2, 6, 1]} rotation-y={-Math.PI / 2} />
-        <Lightformer form="ring" intensity={1.5} color="#8ef6ff" position={[0, -3, 4]} scale={3} />
+        <Lightformer form="rect" intensity={2} color={accent} position={[-5, 0, 2]} scale={[2, 6, 1]} rotation-y={Math.PI / 2} />
+        {FOIL.map((c, i) => <Lightformer key={c} form="rect" intensity={1.6} color={c} position={FOIL_AT[i]} scale={[1.2, 3, 1]} />)}
       </Environment>
 
       {scene.kind === "card" && (
@@ -90,19 +103,19 @@ function Contents({ scene }: { scene: Scene }) {
       {scene.kind === "hand" && scene.textures.map((c, i) => {
         // fan the owned licenses like a hand of cards; the selected one lifts toward you
         const off = i - scene.selected;
-        const base = layout.s * (narrow ? 0.8 : 0.78);
+        const base = layout.s * (narrow ? 1 : 0.78);
         const sel = off === 0;
         return (
           <Card key={c.key} texture={c.texture} alive={sel}
-            position={[off * CARD_W * base * 0.42 + Math.sign(off) * CARD_W * base * 0.3, (narrow ? layout.y : viewport.height * 0.1) - Math.abs(off) * 0.07, sel ? 0.5 : -Math.abs(off) * 0.12]}
+            position={[railX + off * CARD_W * base * 0.42 + Math.sign(off) * CARD_W * base * 0.3, (narrow ? 0 : viewport.height * 0.03) - Math.abs(off) * 0.07, sel ? 0.5 : -Math.abs(off) * 0.12]}
             baseRotation={[0, -off * 0.18, -off * 0.05]} scale={base * (sel ? 1 : 0.8)} dim={sel ? 1 : 0.5} />
         );
       })}
 
       {scene.kind === "logo" && <Logo3D position={[layout.x, layout.y, 0]} scale={layout.s * (narrow ? 0.8 : 0.72)} />}
 
-      <Shards accent={scene.palette[2]} />
-      <Sparkles count={narrow ? 40 : 80} scale={[viewport.width, viewport.height, 3]} size={2.2} speed={0.25} opacity={0.5} color={scene.palette[2]} />
+      <Shards accent={accent} />
+      {!reducedMotion() && <Sparkles count={narrow ? 40 : 80} scale={[viewport.width, viewport.height, 3]} size={2.2} speed={0.25} opacity={0.5} color={accent} />}
     </>
   );
 }
