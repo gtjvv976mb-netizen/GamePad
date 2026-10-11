@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { suspendStoreNavigation } from "../input/nav";
 import { campaignFor, offlineGameUrl } from "./campaigns";
 import "./player.css";
@@ -9,6 +9,7 @@ export type GameLaunch = { slug: string; demo: boolean };
 export function GamePlayer({ launch, close }: { launch: GameLaunch; close: () => void }) {
   const frame = useRef<HTMLIFrameElement>(null);
   const campaign = campaignFor(launch.slug)!;
+  const [loaded, setLoaded] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const previousFocus = useRef(document.activeElement as HTMLElement | null);
   // The standalone game polls its own controller. Store navigation must stop during play.
@@ -32,6 +33,7 @@ export function GamePlayer({ launch, close }: { launch: GameLaunch; close: () =>
       <span>{launch.demo ? "First chapter demo" : `${campaign.chapters.length} chapter campaign`}</span>
       {!launch.demo && <a className="btn sm" href={offlineGameUrl(launch.slug)} download={`${launch.slug}-gamepad-offline.html`}>Download offline</a>}
     </div>
-    <iframe ref={frame} title={`${campaign.title} game`} src={offlineGameUrl(launch.slug, launch.demo)} allow="gamepad; fullscreen" onLoad={() => frame.current?.contentWindow?.focus()} />
+    {!loaded && <div className="player-loading" role="status">Loading {campaign.title}…</div>}
+    <iframe ref={frame} title={`${campaign.title} game`} src={offlineGameUrl(launch.slug, launch.demo)} allow="gamepad; fullscreen" onLoad={() => { setLoaded(true); frame.current?.contentWindow?.focus(); }} />
   </section>;
 }

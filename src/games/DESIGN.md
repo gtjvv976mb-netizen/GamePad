@@ -40,7 +40,7 @@ Steam's Single-player label alone does not establish offline compatibility for e
 
 The games include 48 original illustrated sprites, layered environments, animation and effects. [Asset prompts and provenance](assets/PROMPTS.md) record the built-in image generation workflow. Music and effects are synthesized locally with Web Audio, unlock after a player gesture, and offer mute/volume controls.
 
-Each standalone file embeds its art, code, story and styles. It makes no wallet, chain, API or other network request. Keyboard, standard controllers and touch use the same simulation controls. Decisions are accessible buttons; controller Select focuses a side panel, and confirm chooses an option. Full-screen and Hints controls allow more room for the world.
+Each standalone file embeds its required one or two art atlases, code, story and styles. Atlas selection keeps the complete original artwork for that title while reducing download size. It makes no wallet, chain, API or other network request. Keyboard, standard controllers and touch use the same simulation controls. Decisions are accessible buttons; controller Select focuses a side panel, and confirm chooses an option. Full-screen and Hints controls allow more room for the world.
 
 V2 snapshots preserve exact simulation state and title-specific equipment. Reward ledgers prevent repeatedly farming chapter rewards. Import validates the title, chapter, rules fingerprint, state and equipment before replacing the running game. Older prototype saves preserve campaign unlocks, while restarting the changed chapter with its new rules. Browser storage can be unavailable; JSON export/import remains usable.
 

@@ -6,6 +6,34 @@ import { CAMPAIGNS } from "../src/games/campaigns";
 import type { Room } from "../src/games/engines/strategy/light";
 import { findLumenPlan } from "./helpers/lumen-plans";
 
+test("offline packages include every required atlas without unused art downloads", async ({ isMobile }) => {
+  test.skip(isMobile, "generated file audit runs once in Node");
+  const manifest = JSON.parse(await readFile("dist/games/manifest.json", "utf8")) as { games: { slug: string; atlases: string[]; bytes: number; file: string }[] };
+  expect(manifest.games).toHaveLength(16);
+  for (const game of manifest.games) {
+    const required = ["ndp", "osv", "slc", "dpt", "gla"].includes(game.slug) ? ["space"] : game.slug === "rrn" ? ["fantasy", "space"] : ["fantasy", "strategy"];
+    expect(game.atlases).toEqual(required);
+    const html = await readFile(resolve("dist/games", game.file), "utf8");
+    const injected = JSON.parse(html.match(/globalThis\.__GAMEPAD_ART__=(\{[^}]*\});/)![1]) as Record<string, string>;
+    expect(Object.keys(injected)).toEqual(required);
+    expect(Object.values(injected).every(data => data.startsWith("data:image/png;base64,"))).toBe(true);
+    expect(game.bytes).toBe(Buffer.byteLength(html));
+    expect(game.bytes).toBeLessThan(6_100_000);
+  }
+});
+
+test("campaign loading feedback remains visible until its document arrives", async ({ page }) => {
+  let release!: () => void;
+  const delayed = new Promise<void>(resolve => { release = resolve; });
+  await page.route(/\/games\/hcr\.html\?demo=1$/, async route => { await delayed; await route.continue(); });
+  await page.goto("./?no3d&nointro");
+  await page.getByRole("button", { name: "Try first chapter", exact: true }).click();
+  try { await expect(page.getByText("Loading Hollow Crown…", { exact: true })).toBeVisible(); }
+  finally { release(); }
+  await expect(page.frameLocator('iframe[title="Hollow Crown game"]').locator("#chapter-number")).toHaveText("Chapter 1 of 1");
+  await expect(page.locator(".player-loading")).toHaveCount(0);
+});
+
 for (const campaign of CAMPAIGNS) {
   test(`${campaign.slug}: downloaded campaign runs and resumes with the network disabled`, async ({ page, context }) => {
     const errors: string[] = [], requests: string[] = [];
