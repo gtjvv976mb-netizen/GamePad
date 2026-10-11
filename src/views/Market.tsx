@@ -4,8 +4,8 @@ import { useStore, split } from "../state/store";
 import { useCatalog, textureFor, thumbFor, type Entry } from "../state/catalog";
 import { useScene } from "../state/scene";
 import { useNav } from "../input/nav";
-import { eth, short } from "../lib/format";
-import { Eth } from "../ui/Eth";
+import { sol, short } from "../lib/format";
+import { Sol } from "../ui/Sol";
 import { IconLeft, IconRight } from "../ui/Icons";
 import { useAct, useFit, useNarrow } from "./common";
 
@@ -19,7 +19,7 @@ export function MarketView({ go, focus }: { go: Go; focus?: string }) {
   const rows = useMemo(() => store.listings
     .map(l => ({ l, g: byId.get(l.gameId) }))
     .filter((x): x is { l: typeof x.l; g: Entry } => !!x.g && (!only || x.g.slug === only))
-    .sort((a, b) => (b.l.mine ? 1 : 0) - (a.l.mine ? 1 : 0) || a.l.priceEth / (a.g.priceEth || 1) - b.l.priceEth / (b.g.priceEth || 1)),
+    .sort((a, b) => (b.l.mine ? 1 : 0) - (a.l.mine ? 1 : 0) || a.l.price / (a.g.price || 1) - b.l.price / (b.g.price || 1)),
   [store.listings, byId, only]);
 
   const listRef = useRef<HTMLUListElement>(null);
@@ -55,7 +55,7 @@ export function MarketView({ go, focus }: { go: Go; focus?: string }) {
   });
 
   const r = rows[cur];
-  const cut = r ? split(r.l.priceEth, r.g.royaltyPct, true) : null;
+  const cut = r ? split(r.l.price, r.g.royaltyPct, true) : null;
 
   return (
     <>
@@ -64,7 +64,7 @@ export function MarketView({ go, focus }: { go: Go; focus?: string }) {
         <section className="panel list" aria-labelledby="mk-h">
           <h2 id="mk-h">{only ? `Used · ${focusGame.title}` : "Used games"}</h2>
           <p className="sub">Every sale pays the studio its royalty before the seller.{only && <> <button className="linkish" onClick={() => { setOnly(undefined); setSel(0); }}>Show all games</button></>}</p>
-          <p className="sr" aria-live="polite">{r ? `${r.g.title}, ${eth(r.l.priceEth)}, ${r.l.mine ? "listed by you" : `sold by ${short(r.l.seller)}`}` : ""}</p>
+          <p className="sr" aria-live="polite">{r ? `${r.g.title}, ${sol(r.l.price)}, ${r.l.mine ? "listed by you" : `sold by ${short(r.l.seller)}`}` : ""}</p>
           <ul ref={listRef} className="rows" aria-label="Listings">
             {rows.length === 0 && <li className="empty"><span className="dim">No used copies listed right now.</span></li>}
             {rows.slice(page * per, page * per + per).map(({ l, g }, k) => {
@@ -78,8 +78,8 @@ export function MarketView({ go, focus }: { go: Go; focus?: string }) {
                     <span className="rt">{g.title}</span>
                     <span className="rs">{l.mine ? "Your listing" : short(l.seller)}</span>
                   </span>
-                  <span className="rp"><Eth v={l.priceEth} col />{g.priceEth > 0 && <span className="save">−{Math.round((1 - l.priceEth / g.priceEth) * 100)}%</span>}</span>
-                  <button className={`btn sm ${i === cur && !l.mine ? "primary" : ""}`} aria-label={`${l.mine ? "Cancel listing" : "Buy"} ${g.title}, ${eth(l.priceEth)}`}
+                  <span className="rp"><Sol v={l.price} col />{g.price > 0 && <span className="save">−{Math.round((1 - l.price / g.price) * 100)}%</span>}</span>
+                  <button className={`btn sm ${i === cur && !l.mine ? "primary" : ""}`} aria-label={`${l.mine ? "Cancel listing" : "Buy"} ${g.title}, ${sol(l.price)}`}
                     onClick={e => { e.stopPropagation(); setSel(i); buy(i); }}>{l.mine ? "Cancel" : "Buy"}</button>
                 </li>
               );
@@ -88,8 +88,8 @@ export function MarketView({ go, focus }: { go: Go; focus?: string }) {
           {/* where the money goes on the selected copy, and the way to its store page */}
           {r && cut && (
             <div className="legend mk-cut">
-              <span>{r.l.mine ? "You get" : "Seller gets"} <b>{eth(cut.rest)}</b></span>
-              <span>{r.g.studio} gets <b>{eth(cut.royalty)}</b> ({r.g.royaltyPct}%)</span>
+              <span>{r.l.mine ? "You get" : "Seller gets"} <b>{sol(cut.rest)}</b></span>
+              <span>{r.g.studio} gets <b>{sol(cut.royalty)}</b> ({r.g.royaltyPct}%)</span>
               <button className="linkish" onClick={() => go("store", r.g.slug)} aria-label={`Store page for ${r.g.title}`}>Store page</button>
             </div>
           )}

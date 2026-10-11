@@ -29,8 +29,8 @@ jobs:
       - run: npm ci
       - run: npm run build
         env:
-          VITE_STORE_ADDRESS_BASE_SEPOLIA: ${{ vars.VITE_STORE_ADDRESS_BASE_SEPOLIA }}
-          VITE_STORE_ADDRESS_SEPOLIA: ${{ vars.VITE_STORE_ADDRESS_SEPOLIA }}
+          VITE_STORE_PROGRAM_DEVNET: ${{ vars.VITE_STORE_PROGRAM_DEVNET }}
+          VITE_SOLANA_RPC: ${{ vars.VITE_SOLANA_RPC }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

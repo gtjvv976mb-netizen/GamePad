@@ -3,7 +3,7 @@ import type { Go } from "../App";
 import { useStore, split } from "../state/store";
 import { useScene } from "../state/scene";
 import { imageTexture, titleTexture } from "../three/textures";
-import { eth } from "../lib/format";
+import { sol } from "../lib/format";
 import { useAct } from "./common";
 import { HOUSE_PALETTE } from "../data/games";
 import { AGlyph } from "../ui/Logo";
@@ -26,7 +26,7 @@ export function StudioView({ go }: { go: Go }) {
   const act = useAct();
   const [title, setTitle] = useState("");
   const [genre, setGenre] = useState("Action");
-  const [price, setPrice] = useState("0.008");
+  const [price, setPrice] = useState("0.16");
   const [roy, setRoy] = useState(8);
   const [cover, setCover] = useState<string | undefined>();
 
@@ -35,8 +35,8 @@ export function StudioView({ go }: { go: Go }) {
   useScene(scene);
 
   const p = Number(price);
-  const ok = title.trim().length > 1 && p >= 0 && p < 10;
-  const why = title.trim().length < 2 ? "Add a title to publish" : p >= 10 ? "Keep the price under 10 ETH" : "Enter a price of 0 or more";
+  const ok = title.trim().length > 1 && p >= 0 && p < 100;
+  const why = title.trim().length < 2 ? "Add a title to publish" : p >= 100 ? "Keep the price under 100 SOL" : "Enter a price of 0 or more";
   const sale = split(p || 0, roy, false);
 
   return (
@@ -45,14 +45,14 @@ export function StudioView({ go }: { go: Go }) {
         <form className="panel" onSubmit={e => {
           e.preventDefault();
           if (!ok) return;
-          act(async () => { await store.publish({ title: title.trim(), genre, priceEth: p, royaltyPct: roy, cover }); go("store", undefined); }, `${title.trim()} is on the shelf`);
+          act(async () => { await store.publish({ title: title.trim(), genre, price: p, royaltyPct: roy, cover }); go("store", undefined); }, `${title.trim()} is on the shelf`);
         }}>
           <h2>Publish a game</h2>
-          {store.mode === "live" && <p className="sub">Publishing signs one transaction on the test network.</p>}
+          {store.mode === "live" && <p className="sub">Publishing signs one transaction on Solana devnet.</p>}
           <div className="form">
             <div className="field full"><label htmlFor="st-t">Title</label><input id="st-t" type="text" value={title} maxLength={40} onChange={e => setTitle(e.target.value)} placeholder="Comet Garden" /></div>
             <div className="field"><label htmlFor="st-g">Genre</label><select id="st-g" value={genre} onChange={e => setGenre(e.target.value)}>{GENRES.map(x => <option key={x}>{x}</option>)}</select></div>
-            <div className="field"><label htmlFor="st-p">Price (ETH)</label><input id="st-p" type="number" min="0" step="0.0001" value={price} onChange={e => setPrice(e.target.value)} /></div>
+            <div className="field"><label htmlFor="st-p">Price (SOL)</label><input id="st-p" type="number" min="0" step="0.01" value={price} onChange={e => setPrice(e.target.value)} /></div>
             <div className="field full">
               <label htmlFor="st-r">Resale royalty: {roy}%</label>
               <input id="st-r" type="range" min="0" max="15" value={roy} onChange={e => setRoy(+e.target.value)} />
@@ -64,7 +64,7 @@ export function StudioView({ go }: { go: Go }) {
             </div>
             <div className="field full">
               <div className="legend">
-                <span>{p > 0 ? <>Per copy: you get <b>{eth(sale.rest)}</b> (GamePad 10%)</> : "Per copy: free, so nothing to split"}</span>
+                <span>{p > 0 ? <>Per copy: you get <b>{sol(sale.rest)}</b> (GamePad 10%)</> : "Per copy: free, so nothing to split"}</span>
                 <span>{roy > 0 ? <>Per resale: you get <b>{roy}%</b> of the price</> : "Per resale: no royalty"}</span>
               </div>
             </div>

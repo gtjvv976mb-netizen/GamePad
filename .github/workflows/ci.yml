@@ -25,17 +25,19 @@ jobs:
           path: test-results
           retention-days: 7
 
-  contracts:
+  program:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: contracts
+        working-directory: program
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: Swatinem/rust-cache@v2
         with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: contracts/package-lock.json
-      - run: npm ci
-      - run: npm test
+          workspaces: program
+      - run: cargo test
+      - name: Build for Solana (SBF)
+        run: |
+          sh -c "$(curl -sSfL https://release.anza.xyz/stable/install)"
+          export PATH="$HOME/.local/share/solana/install/active_release/bin:$PATH"
+          cargo build-sbf --manifest-path programs/gamepad-store/Cargo.toml

@@ -14,7 +14,7 @@ export function useCatalog(): Entry[] {
   return useMemo(() => [
     ...GAMES,
     ...published.map<Entry>(p => ({
-      slug: `custom-${p.chainId}`, chainId: p.chainId, title: p.title, studio: p.studio ?? "You", genre: p.genre, priceEth: p.priceEth,
+      slug: `custom-${p.chainId}`, chainId: p.chainId, title: p.title, studio: p.studio ?? "You", genre: p.genre, price: p.price,
       royaltyPct: p.royaltyPct, tags: [p.genre], blurb: p.studio && p.studio !== "You" ? "A new release from an independent studio." : "Published from your Studio.", palette: PALETTE, custom: p,
     })),
   ], [published]);

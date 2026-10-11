@@ -1,6 +1,6 @@
 # GamePad
 
-A game store where you own the copy. Buy games with crypto, sell them on when you're done, and the studio earns a royalty every time a copy changes hands.
+A game store where you own the copy. Buy games with SOL, sell them on when you're done, and the studio earns a royalty every time a copy changes hands.
 
 The whole store fits on one screen. Five tabs (left rail on desktop, top bar on phones) switch between Store, Market, Library, Studio and Profile, and a single 3D stage behind them re-stages itself for each one: the selected game floats as a holographic license card, your library fans out like a hand of cards, and the profile shows the controller logo in 3D. Behind it all, a looping clip of floating game worlds joined by bridges of foil light plays full screen, tinted by the selected game's cover.
 
@@ -17,21 +17,24 @@ npm run test:e2e     # Playwright, desktop and phone sizes (builds first: npm ru
 
 ## Preview mode and live mode
 
-- **Live:** a wallet is connected on a test network where the store contract is deployed. Purchases, listings, resales and withdrawals are real transactions on that test network, and ownership is read from the chain.
-- **Preview:** no contract on that network yet, or "Look around without a wallet". Everything works the same, but it's simulated in the browser and labeled "Preview".
+- **Live:** a Solana wallet is connected and the store program is deployed on devnet. Purchases, listings and resales are real devnet transactions, and ownership is read from the chain.
+- **Preview:** the program isn't deployed yet, or "Look around without a wallet". Everything works the same, but it's simulated in the browser and labeled "Preview".
 
-Test networks only: Base Sepolia and Sepolia. Mainnet (real money) is deliberately not configured.
+Solana devnet only. Mainnet (real money) is deliberately not configured.
 
-To go live on a test network, deploy the contract (see [contracts/README.md](contracts/README.md)), then put its address in `.env`:
+To go live on devnet, deploy the program (see [program/README.md](program/README.md)), then put its id in `.env`:
 
 ```sh
 cp .env.example .env
-# VITE_STORE_ADDRESS_BASE_SEPOLIA=0x...
+# VITE_STORE_PROGRAM_DEVNET=<program id>
+# VITE_SOLANA_RPC=<optional devnet RPC; defaults to https://api.devnet.solana.com>
 ```
 
 ## Wallets and sign-in
 
-Wallets connect through wagmi and viem: any installed browser wallet (MetaMask, Rabby and others, discovered with EIP-6963) or Coinbase Smart Wallet, which uses a passkey and needs no extension. After connecting, players sign in with Sign-In with Ethereum (EIP-4361), a free signature with no transaction.
+Any Solana wallet that supports the [Wallet Standard](https://github.com/wallet-standard/wallet-standard) shows up by name: Phantom, Solflare, Backpack and others. Without one installed, the sheet offers to open GamePad inside the Phantom or Solflare app. After connecting, players sign in with Sign In With Solana, a free signature with no transaction; the site checks the Ed25519 signature and that the message carries its own domain and nonce. The last wallet reconnects quietly on the next visit.
+
+Transactions are signed in the wallet and sent to devnet through the site's own RPC, so they land on devnet whatever network the wallet is showing. `e2e/wallet.spec.ts` runs the sign-in against a stand-in wallet with a real Ed25519 key, including a forged signature that must be refused.
 
 ## How it's built
 
@@ -39,7 +42,7 @@ Wallets connect through wagmi and viem: any installed browser wallet (MetaMask, 
 - 3D: three.js with @react-three/fiber and drei. A custom shader for the holographic foil. Resolution steps down on slower GPUs, and without WebGL (or with `?no3d`) the stage falls back to CSS.
 - The logo is a pixel mark: a controller on a 16 by 10 grid, with two foil cells for the face buttons. The flat mark is an SVG drawn at a whole number of screen pixels per cell, so it stays sharp. In 3D each pixel is a stack of two cubes, and the two foil cubes hop around the hub between the face buttons.
 - Motion: CSS for the interface choreography, Motion (Framer Motion) for tab and sheet transitions, and the 3D layer for the card, the voxels and the camera. See [Motion](#motion).
-- Web3: wagmi 2, viem 2, and the `GamePadStore` ERC-1155 contract in [contracts/](contracts/) with royalty-enforcing resale.
+- Solana: @solana/kit for transactions and reads, the Wallet Standard for wallets, and the `gamepad_store` Anchor program in [program/](program/), which keeps licenses in the store so every resale pays the studio.
 - Fonts: Big Shoulders Display, Manrope and JetBrains Mono, self-hosted.
 - Cover art, the short cover loops (all 16 games) and the background clip were generated with Higgsfield. The background is a seamless 9.5 second loop (VP9 WebM with an H.264 fallback, a portrait cut for phones); with Data Saver on, or the stop button pressed, it shows its first frame instead. The first visit of a session opens with a second Higgsfield clip, a 5 second fly-in through a warp tunnel that lands on the loop's first frame (`public/world/intro-*`).
 - Design tokens and the UI parts are mirrored in the GamePad Brand Board Figma file, on the "GamePad v3 · real app" page; the pixel mark is not there yet.
@@ -88,4 +91,4 @@ One-time setup, done by the repository owner:
    | A Record | `@` | `185.199.111.153` |
    | CNAME Record | `www` | `gtjvv976mb-netizen.github.io.` |
 
-Without a store address in the repository variables `VITE_STORE_ADDRESS_BASE_SEPOLIA` / `VITE_STORE_ADDRESS_SEPOLIA`, the live site runs in preview mode.
+Without a program id in the repository variable `VITE_STORE_PROGRAM_DEVNET`, the live site runs in preview mode. `VITE_SOLANA_RPC` optionally points it at a devnet RPC other than the public one.

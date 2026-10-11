@@ -1,5 +1,0 @@
-node_modules/
-out/
-# only created if someone runs Hardhat tasks directly
-cache/
-artifacts/

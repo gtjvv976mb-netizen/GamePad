@@ -5,13 +5,14 @@ import { SceneCtx } from "./state/scene";
 import { useStore } from "./state/store";
 import { useCatalog } from "./state/catalog";
 import { useSession } from "./web3/session";
-import { chainLabel } from "./web3/config";
+import { NETWORK_LABEL } from "./web3/config";
 import { useNav, usePad } from "./input/nav";
 import { Logo, Seal } from "./ui/Logo";
 import { World } from "./ui/World";
 import { IconLibrary, IconMarket, IconPause, IconPlay, IconProfile, IconStore, IconStudio } from "./ui/Icons";
 import { motionOff, setMotionStopped, subscribeMotion } from "./lib/motion";
 import { useRevealed } from "./lib/show";
+import { short } from "./lib/format";
 import { StoreView } from "./views/Store";
 import { MarketView } from "./views/Market";
 import { LibraryView } from "./views/Library";
@@ -81,7 +82,7 @@ export default function App() {
   // Signed out, the empty Library and Profile carry their own Connect wallet button.
   const hasGames = catalog.some(g => (store.owned[g.chainId] ?? 0) > 0);
   const ownCta = !session.address && !session.guest && (tab === "profile" || (tab === "library" && !hasGames));
-  const [netA, netB] = chainLabel(session.chainId);
+  const [netA, netB] = NETWORK_LABEL;
   const label = TABS.find(t => t.id === tab)!.label;
 
   return (
@@ -193,12 +194,12 @@ function TopBar({ go, connect }: { go: Go; connect: boolean }) {
       <span className="grow" />
       <MotionButton />
       {(s.address || s.guest) && (
-        <span className={`mode ${store.mode === "live" ? "live" : ""}`} title={store.mode === "live" ? "Real transactions on a test network" : "Purchases are simulated in this browser"}>
-          {store.mode === "live" ? "Testnet live" : "Preview"}
+        <span className={`mode ${store.mode === "live" ? "live" : ""}`} title={store.mode === "live" ? "Real transactions on Solana devnet" : "Purchases are simulated in this browser"}>
+          {store.mode === "live" ? "Devnet live" : "Preview"}
         </span>
       )}
       {s.address
-        ? <button className="btn sm" onClick={() => go("profile")}><span className="mono">{s.address.slice(0, 6)}…{s.address.slice(-4)}</span></button>
+        ? <button className="btn sm" onClick={() => go("profile")}><span className="mono">{short(s.address)}</span></button>
         : connect && <button className="btn sm primary" onClick={s.open}>Connect wallet</button>}
     </header>
   );

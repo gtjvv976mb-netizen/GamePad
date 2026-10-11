@@ -14,7 +14,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           three: ["three", "@react-three/fiber", "@react-three/drei"],
-          web3: ["wagmi", "viem", "@tanstack/react-query"],
+          web3: ["@solana/kit", "@wallet-standard/app", "@noble/curves/ed25519.js"],
         },
       },
     },

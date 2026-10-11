@@ -4,8 +4,8 @@ import { useStore, split } from "../state/store";
 import { useCatalog, textureFor, thumbFor } from "../state/catalog";
 import { useScene } from "../state/scene";
 import { useNav } from "../input/nav";
-import { eth } from "../lib/format";
-import { Eth } from "../ui/Eth";
+import { sol } from "../lib/format";
+import { Sol } from "../ui/Sol";
 import { IconLeft, IconRight } from "../ui/Icons";
 import { AGlyph } from "../ui/Logo";
 import { KineticTitle } from "../ui/Kinetic";
@@ -33,7 +33,7 @@ export function StoreView({ go, focus }: { go: Go; focus?: string }) {
   const pages = Math.ceil(catalog.length / per);
   const owned = store.owned[game.chainId] ?? 0;
   const used = store.listings.filter(l => l.gameId === game.chainId && !l.mine);
-  const floor = used.length ? Math.min(...used.map(l => l.priceEth)) : null;
+  const floor = used.length ? Math.min(...used.map(l => l.price)) : null;
 
   // the screen reader hears the games the visitor picks, not the ones the carousel turns to
   const [heard, setHeard] = useState<string | null>(null);
@@ -75,7 +75,7 @@ export function StoreView({ go, focus }: { go: Go; focus?: string }) {
   const scene = useMemo(() => ({ kind: "card" as const, texture: textureFor(game), src: thumbFor(game), key: game.slug, palette: game.palette, side: "right" as const }), [game]);
   useScene(scene);
 
-  const buy = () => act(() => store.buy(game.chainId, game.priceEth), `${game.title} is in your library`);
+  const buy = () => act(() => store.buy(game.chainId, game.price), `${game.title} is in your library`);
 
   useNav(a => {
     if (a === "left") pick(sel - 1);
@@ -86,29 +86,29 @@ export function StoreView({ go, focus }: { go: Go; focus?: string }) {
     else if (a === "alt" && floor !== null) go("market", game.slug);
   });
 
-  const studioCut = split(game.priceEth, game.royaltyPct, false).rest;
+  const studioCut = split(game.price, game.royaltyPct, false).rest;
 
   return (
     <>
       {/* The copy re-enters for each game; the actions stay put, so Buy always means the game on screen. */}
       <section className="hero" {...hold}>
-        <p className="sr" aria-live="polite">{heard === game.slug ? `${game.title}, ${owned ? "in your library" : game.priceEth ? eth(game.priceEth) : "free"}` : ""}</p>
+        <p className="sr" aria-live="polite">{heard === game.slug ? `${game.title}, ${owned ? "in your library" : game.price ? sol(game.price) : "free"}` : ""}</p>
         <div key={game.slug} className="cue">
           <div className="eyebrow" style={{ "--k": 0 } as CSSProperties}>{game.genre} · {game.studio}</div>
           <KineticTitle text={game.title} />
           <p className="blurb" style={{ "--k": 3 } as CSSProperties}>{game.blurb}</p>
-          {(game.priceEth > 0 || game.royaltyPct > 0 || floor !== null) && (
+          {(game.price > 0 || game.royaltyPct > 0 || floor !== null) && (
             <dl className="facts" style={{ "--k": 4 } as CSSProperties}>
-              {game.priceEth > 0 && <div className="fact"><dt>Studio gets</dt><dd><Eth v={studioCut} /></dd></div>}
+              {game.price > 0 && <div className="fact"><dt>Studio gets</dt><dd><Sol v={studioCut} /></dd></div>}
               {game.royaltyPct > 0 && <div className="fact"><dt><span className="lg-only">Resale royalty</span><span className="sm-only">Royalty</span></dt><dd>{game.royaltyPct}%</dd></div>}
-              {floor !== null && <div className="fact"><dt>Used from</dt><dd><Eth v={floor} /></dd></div>}
+              {floor !== null && <div className="fact"><dt>Used from</dt><dd><Sol v={floor} /></dd></div>}
             </dl>
           )}
         </div>
         <div className="actions">
           {owned
             ? <button className="btn owned-chip" onClick={() => go("library", game.slug)}><span className="glyph">A</span><span>In your library{owned > 1 ? ` ×${owned}` : ""}</span></button>
-            : <button className="btn primary" onClick={buy}><AGlyph />{game.priceEth ? `Buy · ${eth(game.priceEth)}` : "Get it free"}</button>}
+            : <button className="btn primary" onClick={buy}><AGlyph />{game.price ? `Buy · ${sol(game.price)}` : "Get it free"}</button>}
           {floor !== null && !owned && <button className="btn" onClick={() => go("market", game.slug)}><span className="glyph">X</span>{used.length} used</button>}
         </div>
       </section>
@@ -122,9 +122,9 @@ export function StoreView({ go, focus }: { go: Go; focus?: string }) {
               const mine = store.owned[g.chainId];
               return (
                 <button key={g.slug} className="tile" aria-current={idx === sel} tabIndex={idx === sel ? 0 : -1} onClick={() => pick(idx)} style={{ "--i": i } as CSSProperties}
-                  aria-label={`${g.title}, ${mine ? "owned" : g.priceEth ? eth(g.priceEth) : "free"}`}>
+                  aria-label={`${g.title}, ${mine ? "owned" : g.price ? sol(g.price) : "free"}`}>
                   {thumbFor(g) ? <img src={thumbFor(g)} alt="" /> : <span style={{ position: "absolute", inset: 0, background: `linear-gradient(135deg, ${g.palette[1]}, ${g.palette[0]})` }} />}
-                  <span className={`tprice ${mine ? "own" : ""}`}>{mine ? "Owned" : g.priceEth ? g.priceEth.toFixed(4).replace(/0+$/, "") : "Free"}</span>
+                  <span className={`tprice ${mine ? "own" : ""}`}>{mine ? "Owned" : g.price ? String(Number(g.price.toFixed(3))) : "Free"}</span>
                   {!narrow && <span className="tname">{g.title}</span>}
                 </button>
               );

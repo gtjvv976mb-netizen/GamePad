@@ -1,0 +1,19 @@
+{
+  "program": "9xNeviToGk1PGUhbwCHNXoxYGwQn9x2oggtJzXhdoT9u",
+  "keys": { "buyer": "4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi", "studio": "8qbHbw2BbbTHBW1sbeqakYXVKRQM8Ne7pLK7m6CVfeR", "treasury": "CktRuQ2mttgRGkXJtyksdKHjUdc2C4TgDzyB98oEzy8", "seller": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq", "authority": "LbUiWL3xVV8hTFYBVdbTNrpDo41NKS6o3LHHuDzjfcY" },
+  "instructions": {
+    "initialize": { "accounts": [["J3AkYy4DywT2tN3pbFoVnkRhV3ztzQrBRApAq1pUA3Wx", false, true], ["LbUiWL3xVV8hTFYBVdbTNrpDo41NKS6o3LHHuDzjfcY", true, true], ["11111111111111111111111111111111", false, false]], "data": "afaf6d1f0d989bede8030303030303030303030303030303030303030303030303030303030303030303" },
+    "publishGame": { "accounts": [["J3AkYy4DywT2tN3pbFoVnkRhV3ztzQrBRApAq1pUA3Wx", false, true], ["5cdDEajByPJw2ybtei5iNXpLxneDWRG67kxP9ZnTXRJ8", false, true], ["8qbHbw2BbbTHBW1sbeqakYXVKRQM8Ne7pLK7m6CVfeR", true, true], ["11111111111111111111111111111111", false, false]], "data": "e15f1f247ea735df80b2e60e00000000200317000000697066733a2f2f70656e64696e672f6e64702e6a736f6e" },
+    "updateGame": { "accounts": [["4A8fhjLWLXTqFHzX4wmzEseZQQL6LJgTd6h4hnpkafPp", false, true], ["8qbHbw2BbbTHBW1sbeqakYXVKRQM8Ne7pLK7m6CVfeR", true, false]], "data": "9f3d848303ead1dc0300000000000000000e27070000000000" },
+    "buy": { "accounts": [["J3AkYy4DywT2tN3pbFoVnkRhV3ztzQrBRApAq1pUA3Wx", false, false], ["EoDvJSbYzEjwJ9NXdX5X6wnShS8Vf7LMQZrhEoQUJjag", false, false], ["9eQzrxnKVGT3AW8r5zGfT3P54BqVttL8mEvmRv2fqWyk", false, true], ["4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi", true, true], ["8qbHbw2BbbTHBW1sbeqakYXVKRQM8Ne7pLK7m6CVfeR", false, true], ["CktRuQ2mttgRGkXJtyksdKHjUdc2C4TgDzyB98oEzy8", false, true], ["11111111111111111111111111111111", false, false]], "data": "66063d1201daebea020000000000000080b2e60e00000000" },
+    "list": { "accounts": [["J3AkYy4DywT2tN3pbFoVnkRhV3ztzQrBRApAq1pUA3Wx", false, true], ["3UDHLXTnKuA7UVNYDjvd3MdG4TwkQZhMnBuTMUv4UgJp", false, true], ["CUA7DWe57KbTv2wUem2RjeLH4ojAnDWsQmsC18VwYx8u", false, true], ["GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq", true, true], ["11111111111111111111111111111111", false, false]], "data": "36aec14311298426020000000000000000c2eb0b00000000" },
+    "cancel": { "accounts": [["CUA7DWe57KbTv2wUem2RjeLH4ojAnDWsQmsC18VwYx8u", false, true], ["3UDHLXTnKuA7UVNYDjvd3MdG4TwkQZhMnBuTMUv4UgJp", false, true], ["GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq", true, true]], "data": "e8dbdf29dbecdcbe0900000000000000" },
+    "buyListing": { "accounts": [["J3AkYy4DywT2tN3pbFoVnkRhV3ztzQrBRApAq1pUA3Wx", false, false], ["CUA7DWe57KbTv2wUem2RjeLH4ojAnDWsQmsC18VwYx8u", false, true], ["EoDvJSbYzEjwJ9NXdX5X6wnShS8Vf7LMQZrhEoQUJjag", false, false], ["9eQzrxnKVGT3AW8r5zGfT3P54BqVttL8mEvmRv2fqWyk", false, true], ["4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi", true, true], ["GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq", false, true], ["8qbHbw2BbbTHBW1sbeqakYXVKRQM8Ne7pLK7m6CVfeR", false, true], ["CktRuQ2mttgRGkXJtyksdKHjUdc2C4TgDzyB98oEzy8", false, true], ["11111111111111111111111111111111", false, false]], "data": "73952a6c2c318c990900000000000000" }
+  },
+  "accounts": {
+    "store": "8230f7f4b6bf1e1a05050505050505050505050505050505050505050505050505050505050505050303030303030303030303030303030303030303030303030303030303030303e80310000000000000000900000000000000fe",
+    "game": "1b5aa67d4a6479120200000000000000020202020202020202020202020202020202020202020202020202020202020280b2e60e00000000200301fd17000000697066733a2f2f70656e64696e672f6863722e6a736f6e",
+    "license": "f898c364b96cb0e70101010101010101010101010101010101010101010101010101010101010101020000000000000003000000fc",
+    "listing": "da2032492b861a3a09000000000000000404040404040404040404040404040404040404040404040404040404040404020000000000000000c2eb0b00000000fb"
+  }
+}

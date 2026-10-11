@@ -30,14 +30,14 @@ test("every tab fits on one screen", async ({ page }) => {
 test("buy a game, sell it on the market, and see it in activity", async ({ page }) => {
   await guest(page);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Hollow Crown");
-  await page.getByRole("button", { name: /Buy · 0\.0125 ETH/ }).click();
+  await page.getByRole("button", { name: /Buy · 0\.25 SOL/ }).click();
   await expect(page.getByText("Hollow Crown is in your library")).toBeVisible();
   await expect(page.getByText("In your library", { exact: true })).toBeVisible();
 
   await page.getByRole("tab", { name: "Library" }).click();
   await page.getByRole("button", { name: /Sell this copy/ }).click();
-  await page.getByRole("textbox").fill("0.01");
-  await expect(page.getByText(/Gravewright gets 0\.0008 ETH \(8%\)/)).toBeVisible();
+  await page.getByRole("textbox").fill("0.2");
+  await expect(page.getByText(/Gravewright gets 0\.016 SOL \(8%\)/)).toBeVisible();
   await page.getByRole("button", { name: /List it/ }).click();
   await expect(page.getByText("Hollow Crown is listed on the market")).toBeVisible();
 
@@ -68,6 +68,9 @@ test("publish a game from the studio", async ({ page }) => {
 test("buying asks for a wallet first", async ({ page }) => {
   await page.getByRole("button", { name: /Buy ·/ }).click();
   await expect(page.getByRole("dialog", { name: "Connect" })).toBeVisible();
+  // no wallet installed in the test browser: offer the Solana wallet apps instead
+  await expect(page.getByRole("link", { name: /Phantom/ })).toHaveAttribute("href", /^https:\/\/phantom\.app\/ul\/browse\//);
+  await expect(page.getByRole("link", { name: /Solflare/ })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
@@ -77,6 +80,6 @@ test("no em or en dash anywhere, even for a free game or a zero price", async ({
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Gridlock Arena");
   expect(await page.locator("body").innerText()).not.toMatch(/[—–]/);
   await page.getByRole("tab", { name: "Studio" }).click();
-  await page.getByLabel("Price (ETH)").fill("0");
+  await page.getByLabel("Price (SOL)").fill("0");
   expect(await page.locator("body").innerText()).not.toMatch(/[—–]/);
 });
