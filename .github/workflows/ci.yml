@@ -38,6 +38,6 @@ jobs:
       - run: cargo test
       - name: Build for Solana (SBF)
         run: |
-          sh -c "$(curl -sSfL https://release.anza.xyz/stable/install)"
+          sh -c "$(curl -sSfL https://release.anza.xyz/v4.3.0/install)"
           export PATH="$HOME/.local/share/solana/install/active_release/bin:$PATH"
-          cargo build-sbf --manifest-path programs/gamepad-store/Cargo.toml
+          cargo build-sbf --tools-version v1.57 --manifest-path programs/gamepad-store/Cargo.toml

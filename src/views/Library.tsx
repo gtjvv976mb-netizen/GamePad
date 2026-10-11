@@ -51,7 +51,7 @@ export function LibraryView({ go, focus }: { go: Go; focus?: string }) {
   }
   const p = Number(price);
   const valid = !!game && p > 0 && p < 1000;
-  const cut = game && valid ? split(p, game.royaltyPct, true) : null;
+  const cut = game && valid ? split(p, game.royaltyPct, true, store.feeBps) : null;
   const copies = game ? store.owned[game.chainId] ?? 0 : 0;
 
   if (!mine.length) {

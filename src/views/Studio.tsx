@@ -37,7 +37,7 @@ export function StudioView({ go }: { go: Go }) {
   const p = Number(price);
   const ok = title.trim().length > 1 && p >= 0 && p < 100;
   const why = title.trim().length < 2 ? "Add a title to publish" : p >= 100 ? "Keep the price under 100 SOL" : "Enter a price of 0 or more";
-  const sale = split(p || 0, roy, false);
+  const sale = split(p || 0, roy, false, store.feeBps);
 
   return (
     <>
@@ -64,7 +64,7 @@ export function StudioView({ go }: { go: Go }) {
             </div>
             <div className="field full">
               <div className="legend">
-                <span>{p > 0 ? <>Per copy: you get <b>{sol(sale.rest)}</b> (GamePad 10%)</> : "Per copy: free, so nothing to split"}</span>
+                <span>{p > 0 ? <>Per copy: you get <b>{sol(sale.rest)}</b> (GamePad {store.feeBps / 100}%)</> : "Per copy: free, so nothing to split"}</span>
                 <span>{roy > 0 ? <>Per resale: you get <b>{roy}%</b> of the price</> : "Per resale: no royalty"}</span>
               </div>
             </div>

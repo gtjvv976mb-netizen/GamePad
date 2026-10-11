@@ -9,3 +9,4 @@ playwright-report
 *.tsbuildinfo
 program/target
 program/.keys
+program/.tools

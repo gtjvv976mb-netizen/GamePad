@@ -5,13 +5,12 @@ anchor_version = "0.31.1"
 resolution = true
 skip-lint = false
 
-# `anchor keys sync` writes the deployed address here and into declare_id! in lib.rs.
 [programs.devnet]
-gamepad_store = "9xNeviToGk1PGUhbwCHNXoxYGwQn9x2oggtJzXhdoT9u"
+gamepad_store = "7WBHwtN7nZELLnhKAC3GiwZ4RTBjZPaGTrL9LbqYowS5"
 
 [programs.localnet]
-gamepad_store = "9xNeviToGk1PGUhbwCHNXoxYGwQn9x2oggtJzXhdoT9u"
+gamepad_store = "7WBHwtN7nZELLnhKAC3GiwZ4RTBjZPaGTrL9LbqYowS5"
 
 [provider]
 cluster = "devnet"
-wallet = "~/.config/solana/id.json"
+wallet = ".keys/devnet-authority.json"

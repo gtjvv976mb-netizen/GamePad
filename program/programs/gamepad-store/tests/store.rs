@@ -2,10 +2,10 @@
 //! every split of the money down to the lamport.
 
 use anchor_lang::{AccountDeserialize, InstructionData, ToAccountMetas};
-use gamepad_store::{accounts as acc, instruction as ix, Game, License, Listing, Store};
+use gamepad_store::{accounts as acc, instruction as ix, Game, License, Listing, Store, StoreError, BOOTSTRAP_GAMES};
 use solana_program_test::{processor, BanksClient, ProgramTest};
 use solana_sdk::{
-    compute_budget::ComputeBudgetInstruction,
+    compute_budget::ComputeBudgetInstruction, account::Account, bpf_loader_upgradeable::{self, UpgradeableLoaderState},
     account_info::AccountInfo, entrypoint::ProgramResult, instruction::Instruction, native_token::LAMPORTS_PER_SOL,
     pubkey::Pubkey, signature::Keypair, signer::Signer, system_instruction, system_program, transaction::Transaction,
 };
@@ -25,6 +25,10 @@ fn store_pda() -> Pubkey { pda(&[b"store"]) }
 fn game_pda(id: u64) -> Pubkey { pda(&[b"game", &id.to_le_bytes()]) }
 fn license_pda(id: u64, owner: &Pubkey) -> Pubkey { pda(&[b"license", &id.to_le_bytes(), owner.as_ref()]) }
 fn listing_pda(id: u64) -> Pubkey { pda(&[b"listing", &id.to_le_bytes()]) }
+fn program_data_pda() -> Pubkey {
+    Pubkey::find_program_address(&[gamepad_store::ID.as_ref()], &bpf_loader_upgradeable::ID).0
+}
+fn unrelated_program_data() -> Pubkey { Pubkey::new_from_array([99; 32]) }
 
 struct World {
     banks: BanksClient,
@@ -39,30 +43,52 @@ struct World {
 
 impl World {
     async fn new() -> Self {
-        let pt = ProgramTest::new("gamepad_store", gamepad_store::ID, processor!(process));
-        let (mut banks, payer, _) = pt.start().await;
-        let (treasury, studio, alice, bob) = (Keypair::new(), Keypair::new(), Keypair::new(), Keypair::new());
-        // everyone starts with some SOL; the treasury too, so small fees never leave it below rent
-        let fund: Vec<Instruction> = [&treasury, &studio, &alice, &bob].iter()
-            .map(|k| system_instruction::transfer(&payer.pubkey(), &k.pubkey(), 10 * SOL)).collect();
-        let bh = banks.get_latest_blockhash().await.unwrap();
-        banks.process_transaction(Transaction::new_signed_with_payer(&fund, Some(&payer.pubkey()), &[&payer], bh)).await.unwrap();
-        let mut w = World { banks, payer, treasury, studio, alice, bob, sent: 0 };
-        let init = Instruction {
-            program_id: gamepad_store::ID,
-            accounts: acc::Initialize { store: store_pda(), authority: w.payer.pubkey(), system_program: system_program::ID }.to_account_metas(None),
-            data: ix::Initialize { fee_bps: 1000, treasury: w.treasury.pubkey() }.data(),
-        };
+        let mut w = Self::uninitialized().await;
         let payer = w.payer.insecure_clone();
-        w.send(init, &payer).await.unwrap();
+        w.send(w.initialize_ix(payer.pubkey(), program_data_pda()), &payer).await.unwrap();
         w
+    }
+
+    async fn uninitialized() -> Self {
+        Self::uninitialized_with_proof(true, true).await
+    }
+
+    async fn uninitialized_with_proof(loader_owned: bool, upgradeable: bool) -> Self {
+        let payer = Keypair::new();
+        let (treasury, studio, alice, bob) = (Keypair::new(), Keypair::new(), Keypair::new(), Keypair::new());
+        let mut pt = ProgramTest::new("gamepad_store", gamepad_store::ID, processor!(process));
+        // Native program-test uses a builtin processor. Model the real loader-owned authority proof separately.
+        for (address, authority) in [(program_data_pda(), payer.pubkey()), (unrelated_program_data(), bob.pubkey())] {
+            let state = UpgradeableLoaderState::ProgramData { slot: 0, upgrade_authority_address: upgradeable.then_some(authority) };
+            let owner = if loader_owned { bpf_loader_upgradeable::ID } else { system_program::ID };
+            pt.add_account(address, Account::new_data(SOL, &state, &owner).unwrap());
+        }
+        let (banks, funder, _) = pt.start().await;
+        // everyone starts with some SOL; the treasury too, so small fees never leave it below rent
+        let fund: Vec<Instruction> = [&payer, &treasury, &studio, &alice, &bob].iter()
+            .map(|k| system_instruction::transfer(&funder.pubkey(), &k.pubkey(), 10 * SOL)).collect();
+        let bh = banks.get_latest_blockhash().await.unwrap();
+        banks.process_transaction(Transaction::new_signed_with_payer(&fund, Some(&funder.pubkey()), &[&funder], bh)).await.unwrap();
+        World { banks, payer, treasury, studio, alice, bob, sent: 0 }
+    }
+
+    fn initialize_ix(&self, authority: Pubkey, program_data: Pubkey) -> Instruction {
+        Instruction {
+            program_id: gamepad_store::ID,
+            accounts: acc::Initialize { store: store_pda(), authority, system_program: system_program::ID, program_data }.to_account_metas(None),
+            data: ix::Initialize { fee_bps: 1000, treasury: self.treasury.pubkey() }.data(),
+        }
     }
 
     async fn send(&mut self, i: Instruction, signer: &Keypair) -> Result<(), String> {
         let bh = self.banks.get_latest_blockhash().await.unwrap();
         self.sent += 1;
         let unique = ComputeBudgetInstruction::set_compute_unit_limit(400_000 + self.sent);
-        let tx = Transaction::new_signed_with_payer(&[unique, i], Some(&signer.pubkey()), &[signer], bh);
+        let mut signers = vec![signer];
+        if signer.pubkey() != self.payer.pubkey() && i.accounts.iter().any(|m| m.is_signer && m.pubkey == self.payer.pubkey()) {
+            signers.push(&self.payer);
+        }
+        let tx = Transaction::new_signed_with_payer(&[unique, i], Some(&signer.pubkey()), &signers, bh);
         self.banks.process_transaction(tx).await.map_err(|e| format!("{e:?}"))
     }
 
@@ -78,9 +104,14 @@ impl World {
     }
 
     fn publish_ix(&self, next_id: u64, studio: &Pubkey, price: u64, royalty_bps: u16) -> Instruction {
+        let authority = (next_id <= BOOTSTRAP_GAMES).then_some(self.payer.pubkey());
+        self.publish_with_authority_ix(next_id, studio, price, royalty_bps, authority)
+    }
+
+    fn publish_with_authority_ix(&self, next_id: u64, studio: &Pubkey, price: u64, royalty_bps: u16, bootstrap_authority: Option<Pubkey>) -> Instruction {
         Instruction {
             program_id: gamepad_store::ID,
-            accounts: acc::PublishGame { store: store_pda(), game: game_pda(next_id), studio: *studio, system_program: system_program::ID }.to_account_metas(None),
+            accounts: acc::PublishGame { store: store_pda(), game: game_pda(next_id), studio: *studio, system_program: system_program::ID, bootstrap_authority }.to_account_metas(None),
             data: ix::PublishGame { price, royalty_bps, uri: "data:application/json;base64,eyJuYW1lIjoiSG9sbG93IENyb3duIn0=".into() }.data(),
         }
     }
@@ -122,6 +153,52 @@ impl World {
             data: ix::BuyListing { listing_id }.data(),
         }
     }
+}
+
+#[tokio::test]
+async fn only_the_program_upgrade_authority_can_initialize() {
+    let mut w = World::uninitialized().await;
+    let attacker = w.bob.insecure_clone();
+    let error = w.send(w.initialize_ix(attacker.pubkey(), program_data_pda()), &attacker).await.unwrap_err();
+    assert!(error.contains(&format!("Custom({})", u32::from(StoreError::UnauthorizedInitialize))), "unexpected rejection: {error}");
+    assert!(w.read::<Store>(store_pda()).await.is_none(), "rejected initialization leaves no store");
+    assert!(w.send(w.initialize_ix(attacker.pubkey(), unrelated_program_data()), &attacker).await.is_err(), "another program's authority proof cannot be substituted");
+    assert!(w.read::<Store>(store_pda()).await.is_none());
+
+    let authority = w.payer.insecure_clone();
+    w.send(w.initialize_ix(authority.pubkey(), program_data_pda()), &authority).await.unwrap();
+    let store = w.read::<Store>(store_pda()).await.unwrap();
+    assert_eq!((store.authority, store.treasury, store.fee_bps), (authority.pubkey(), w.treasury.pubkey(), 1000));
+    assert!(w.send(w.initialize_ix(authority.pubkey(), program_data_pda()), &authority).await.is_err(), "initialization is one-time");
+}
+
+#[tokio::test]
+async fn initialization_requires_a_loader_owned_upgradeable_authority_proof() {
+    for (loader_owned, upgradeable) in [(false, true), (true, false)] {
+        let mut w = World::uninitialized_with_proof(loader_owned, upgradeable).await;
+        let authority = w.payer.insecure_clone();
+        assert!(w.send(w.initialize_ix(authority.pubkey(), program_data_pda()), &authority).await.is_err(), "proof must be loader-owned and retain an upgrade authority");
+        assert!(w.read::<Store>(store_pda()).await.is_none());
+    }
+}
+
+#[tokio::test]
+async fn seed_slots_need_authority_and_later_publishing_is_permissionless() {
+    let mut w = World::new().await;
+    let studio = w.studio.insecure_clone();
+    let attacker = w.bob.insecure_clone();
+    for approval in [None, Some(attacker.pubkey())] {
+        let error = w.send(w.publish_with_authority_ix(1, &attacker.pubkey(), SOL, 500, approval), &attacker).await.unwrap_err();
+        assert!(error.contains(&format!("Custom({})", u32::from(StoreError::BootstrapAuthorityRequired))), "unexpected rejection: {error}");
+    }
+    assert_eq!(w.read::<Store>(store_pda()).await.unwrap().game_count, 0);
+    assert!(w.read::<Game>(game_pda(1)).await.is_none());
+    for id in 1..=BOOTSTRAP_GAMES {
+        w.send(w.publish_ix(id, &studio.pubkey(), SOL, 500), &studio).await.unwrap();
+    }
+    assert_eq!(w.read::<Game>(game_pda(BOOTSTRAP_GAMES)).await.unwrap().studio, studio.pubkey(), "the approved studio remains the payout recipient");
+    w.send(w.publish_with_authority_ix(BOOTSTRAP_GAMES + 1, &attacker.pubkey(), SOL, 500, None), &attacker).await.unwrap();
+    assert_eq!(w.read::<Game>(game_pda(BOOTSTRAP_GAMES + 1)).await.unwrap().studio, attacker.pubkey());
 }
 
 #[tokio::test]

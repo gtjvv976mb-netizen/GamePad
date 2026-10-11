@@ -5,7 +5,7 @@
 
 use anchor_lang::{AccountSerialize, InstructionData, ToAccountMetas};
 use gamepad_store::{accounts as acc, instruction as ix, Game, License, Listing, Store};
-use anchor_lang::system_program;
+use anchor_lang::{system_program, solana_program::bpf_loader_upgradeable};
 use solana_sdk::{instruction::AccountMeta, pubkey::Pubkey};
 
 const FIXTURE: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../client-fixture.json");
@@ -35,11 +35,14 @@ fn client_fixture() {
     let license = |id: u64, o: &Pubkey| pda(&[b"license", &id.to_le_bytes(), o.as_ref()]);
     let listing = |id: u64| pda(&[b"listing", &id.to_le_bytes()]);
     let sys = system_program::ID;
+    let program_data = Pubkey::find_program_address(&[gamepad_store::ID.as_ref()], &bpf_loader_upgradeable::ID).0;
 
     let ixs = [
-        entry("initialize", acc::Initialize { store, authority, system_program: sys }.to_account_metas(None),
+        entry("initialize", acc::Initialize { store, authority, system_program: sys, program_data }.to_account_metas(None),
             ix::Initialize { fee_bps: 1000, treasury }.data()),
-        entry("publishGame", acc::PublishGame { store, game: game(17), studio, system_program: sys }.to_account_metas(None),
+        entry("publishGame", acc::PublishGame { store, game: game(17), studio, system_program: sys, bootstrap_authority: None }.to_account_metas(None),
+            ix::PublishGame { price: 250_000_000, royalty_bps: 800, uri: "ipfs://pending/ndp.json".into() }.data()),
+        entry("publishBootstrapGame", acc::PublishGame { store, game: game(1), studio, system_program: sys, bootstrap_authority: Some(authority) }.to_account_metas(None),
             ix::PublishGame { price: 250_000_000, royalty_bps: 800, uri: "ipfs://pending/ndp.json".into() }.data()),
         entry("updateGame", acc::UpdateGame { game: game(3), studio }.to_account_metas(None),
             ix::UpdateGame { game_id: 3, price: 120_000_000, active: false }.data()),

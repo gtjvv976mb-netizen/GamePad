@@ -12,9 +12,10 @@
 //! - `Listing` ["listing", id u64 le]            one escrowed copy for sale; closed when sold or cancelled
 
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::bpf_loader_upgradeable;
 use anchor_lang::system_program::{transfer, Transfer};
 
-declare_id!("9xNeviToGk1PGUhbwCHNXoxYGwQn9x2oggtJzXhdoT9u");
+declare_id!("7WBHwtN7nZELLnhKAC3GiwZ4RTBjZPaGTrL9LbqYowS5");
 
 /// Resale royalty a studio can set, at most 15%.
 pub const MAX_ROYALTY_BPS: u16 = 1500;
@@ -23,12 +24,14 @@ pub const MAX_FEE_BPS: u16 = 1500;
 pub const BPS: u64 = 10_000;
 /// Metadata uri bytes (a small data: URI or an https/ipfs link).
 pub const MAX_URI: usize = 200;
+/// The first sixteen ids belong to the bundled catalog; its publisher needs the store authority's approval.
+pub const BOOTSTRAP_GAMES: u64 = 16;
 
 #[program]
 pub mod gamepad_store {
     use super::*;
 
-    /// One-time setup by whoever deploys: the platform fee and where it goes.
+    /// One-time setup by the deployed program's upgrade authority: the platform fee and where it goes.
     pub fn initialize(ctx: Context<Initialize>, fee_bps: u16, treasury: Pubkey) -> Result<()> {
         require!(fee_bps <= MAX_FEE_BPS, StoreError::FeeTooHigh);
         let store = &mut ctx.accounts.store;
@@ -50,8 +53,14 @@ pub mod gamepad_store {
         Ok(())
     }
 
-    /// Anyone can publish a game; the signer becomes its studio. Ids count up from 1.
+    /// The first sixteen catalog games need the store authority's co-signature. Afterwards anyone can publish.
     pub fn publish_game(ctx: Context<PublishGame>, price: u64, royalty_bps: u16, uri: String) -> Result<()> {
+        if ctx.accounts.store.game_count < BOOTSTRAP_GAMES {
+            require!(
+                ctx.accounts.bootstrap_authority.as_ref().map(|a| a.key()) == Some(ctx.accounts.store.authority),
+                StoreError::BootstrapAuthorityRequired
+            );
+        }
         require!(royalty_bps <= MAX_ROYALTY_BPS, StoreError::RoyaltyTooHigh);
         require!(uri.len() <= MAX_URI, StoreError::UriTooLong);
         let store = &mut ctx.accounts.store;
@@ -223,6 +232,10 @@ pub struct Initialize<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
     pub system_program: Program<'info, System>,
+    // The loader derives this account from this program's id. Its ownership and variant are checked by ProgramData.
+    #[account(seeds = [crate::ID.as_ref()], bump, seeds::program = bpf_loader_upgradeable::ID,
+        constraint = program_data.upgrade_authority_address == Some(authority.key()) @ StoreError::UnauthorizedInitialize)]
+    pub program_data: Account<'info, ProgramData>,
 }
 
 #[derive(Accounts)]
@@ -242,6 +255,8 @@ pub struct PublishGame<'info> {
     #[account(mut)]
     pub studio: Signer<'info>,
     pub system_program: Program<'info, System>,
+    /// Optional after the bootstrap catalog is complete; the first sixteen publishes require the store authority.
+    pub bootstrap_authority: Option<Signer<'info>>,
 }
 
 #[derive(Accounts)]
@@ -367,4 +382,8 @@ pub enum StoreError {
     WrongTreasury,
     #[msg("Number too large")]
     Overflow,
+    #[msg("Only the deployed program's upgrade authority can initialize the store")]
+    UnauthorizedInitialize,
+    #[msg("The first sixteen catalog games require the store authority's signature")]
+    BootstrapAuthorityRequired,
 }

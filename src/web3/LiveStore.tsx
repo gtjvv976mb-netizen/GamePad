@@ -7,7 +7,7 @@ import {
 } from "./storeProgram";
 import { balanceOf } from "./wallets";
 import { useSession } from "./session";
-import { StoreCtx, type Activity, type CustomGame, type Listing, type StoreApi } from "../state/store";
+import { StoreCtx, type Activity, type CatalogUpdate, type CustomGame, type Listing, type StoreApi } from "../state/store";
 import { GAMES } from "../data/games";
 import { short } from "../lib/format";
 
@@ -36,11 +36,13 @@ export function LiveStore({ children }: { children: ReactNode }) {
   const [chain, setChain] = useState<Chain>(EMPTY);
   const [busy, setBusy] = useState<string | null>(null);
   const busyRef = useRef(false);
+  const refreshGeneration = useRef(0);
   const actKey = `gamepad-activity-devnet-${me}`;
   const [activity, setActivity] = useState<Activity[]>(() => { try { return JSON.parse(localStorage.getItem(actKey) ?? "[]"); } catch { return []; } });
   useEffect(() => { try { localStorage.setItem(actKey, JSON.stringify(activity)); } catch { /* ignore */ } }, [actKey, activity]);
 
   const refresh = useCallback(async () => {
+    const generation = ++refreshGeneration.current;
     const [store, games, licenses, listings, balance] = await Promise.all([
       readStore(program),
       accountsOf(program, "Game", decodeGame),
@@ -48,6 +50,8 @@ export function LiveStore({ children }: { children: ReactNode }) {
       accountsOf(program, "Listing", decodeListing),
       balanceOf(me).catch(() => undefined),
     ]);
+    // A slow poll started before a transaction must not replace the newer post-transaction read.
+    if (generation !== refreshGeneration.current) return;
     const owned: Record<number, number> = {};
     for (const l of licenses) if (l.count > 0) owned[Number(l.gameId)] = l.count;
     games.sort((a, b) => Number(a.id - b.id));
@@ -62,7 +66,7 @@ export function LiveStore({ children }: { children: ReactNode }) {
     tick();
     const t = setInterval(tick, 30_000);
     addEventListener("focus", tick);
-    return () => { live = false; clearInterval(t); removeEventListener("focus", tick); };
+    return () => { live = false; ++refreshGeneration.current; clearInterval(t); removeEventListener("focus", tick); };
   }, [refresh]);
 
   const gameOf = useCallback((id: number) => chain.games.find(g => Number(g.id) === id), [chain.games]);
@@ -74,11 +78,15 @@ export function LiveStore({ children }: { children: ReactNode }) {
 
   const published = useMemo<CustomGame[]>(() => chain.games.flatMap(g => {
     // every game published after the seed catalog, by any studio
-    if (Number(g.id) <= SEEDED || !g.active) return [];
+    if (Number(g.id) <= SEEDED) return [];
     const meta = parseMeta(g.uri);
     const id = Number(g.id);
-    return [{ chainId: id, title: meta.name ?? `Game #${id}`, genre: meta.genre ?? "Indie", price: toSol(g.price), royaltyPct: g.royaltyBps / 100, studio: g.studio === me ? "You" : short(g.studio) }];
+    return [{ chainId: id, title: meta.name ?? `Game #${id}`, genre: meta.genre ?? "Indie", price: toSol(g.price), royaltyPct: g.royaltyBps / 100, studio: g.studio === me ? "You" : short(g.studio), active: g.active }];
   }), [chain.games, me]);
+
+  const catalogUpdates = useMemo<Record<number, CatalogUpdate>>(() => Object.fromEntries(chain.games.map(g => [
+    Number(g.id), { price: toSol(g.price), royaltyPct: g.royaltyBps / 100, active: g.active },
+  ])), [chain.games]);
 
   // The caller toasts the outcome; send hands back the explorer link for its 'View'.
   // `build` runs once the store is busy, so it can read the freshest ids; it returns the instructions and what to log.
@@ -108,13 +116,15 @@ export function LiveStore({ children }: { children: ReactNode }) {
 
   const api = useMemo<StoreApi>(() => ({
     mode: "live",
-    owned: chain.owned, listings, published, activity, busy, balance: chain.balance,
+    owned: chain.owned, listings, published, catalogUpdates, activity, busy, balance: chain.balance, feeBps: chain.store?.feeBps ?? 1000,
     buy: (gameId, price) => {
       const g = gameOf(gameId);
-      const expected = g?.price ?? toLamports(price);
+      // Preserve the price the player saw and agreed to. The program rejects a changed price.
+      const expected = toLamports(price);
       return send("Buying", async () => {
         const s = await freshStore();
         if (!g) throw new Error("This game isn't in the store on devnet yet.");
+        if (!g.active) throw new Error("This game isn't on sale.");
         const ix = await buyIx(program, { buyer: me, gameId: BigInt(gameId), studio: g.studio, treasury: s.treasury, expectedPrice: expected });
         return { ixs: [ix], log: { kind: "buy", gameId, price: toSol(expected) } };
       });
@@ -151,7 +161,7 @@ export function LiveStore({ children }: { children: ReactNode }) {
       });
       return id;
     },
-  }), [chain, listings, published, activity, busy, send, freshStore, gameOf, program, me]);
+  }), [chain, listings, published, catalogUpdates, activity, busy, send, freshStore, gameOf, program, me]);
 
   return <StoreCtx.Provider value={api}>{children}</StoreCtx.Provider>;
 }

@@ -4,17 +4,21 @@ import { GAMES } from "../data/games";
 export type Listing = { id: number; gameId: number; seller: string; price: number; mine: boolean };
 /** Prices are in SOL. `tx` is the transaction signature on devnet, live mode only. */
 export type Activity = { kind: "buy" | "list" | "cancel" | "sold" | "bought-used" | "publish"; gameId: number; price: number; at: number; tx?: string };
-export type CustomGame = { chainId: number; title: string; genre: string; price: number; royaltyPct: number; cover?: string; studio?: string };
+export type CustomGame = { chainId: number; title: string; genre: string; price: number; royaltyPct: number; cover?: string; studio?: string; active?: boolean };
+export type CatalogUpdate = { price: number; royaltyPct: number; active: boolean };
 
 export type StoreApi = {
   /** live = real transactions on Solana devnet, preview = simulated in this browser */
   mode: "live" | "preview";
+  feeBps: number;
   owned: Record<number, number>;
   listings: Listing[];
   /** the wallet's SOL balance, live mode only. Sales and royalties land here directly. */
   balance?: number;
   activity: Activity[];
   published: CustomGame[];
+  /** Current on-chain sale terms, merged with the seed catalog's presentation. */
+  catalogUpdates?: Record<number, CatalogUpdate>;
   busy: string | null;
   // live mode resolves with the explorer link for the transaction
   buy(gameId: number, price: number): Promise<string | void>;
@@ -37,7 +41,7 @@ export const useStore = () => {
 // v2: prices moved from ETH to SOL, so v1 data is left behind.
 const KEY = "gamepad-preview-v2";
 const HANDLES = ["vexa.sol", "kirin.sol", "nightowl.sol", "mossy.sol", "rainjump.sol", "saltyd0g.sol", "lumi.sol", "pix3l.sol", "7xKpQ2rTn8vLmW4dZ3fQa", "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM"];
-const FEE = 0.1;
+const PREVIEW_FEE_BPS = 1000;
 
 type PreviewState = { owned: Record<number, number>; listings: Listing[]; activity: Activity[]; published: CustomGame[]; nextListing: number };
 
@@ -92,6 +96,7 @@ export function PreviewStore({ children }: { children: ReactNode }) {
 
   const api = useMemo<StoreApi>(() => ({
     mode: "preview",
+    feeBps: PREVIEW_FEE_BPS,
     ...st,
     busy,
     buy: (gameId, price) => run("Buying", s => ({
@@ -127,8 +132,8 @@ export function PreviewStore({ children }: { children: ReactNode }) {
 }
 
 /** Share of a sale that reaches each party, matching the store program's split. */
-export const split = (price: number, royaltyPct: number, resale: boolean) => {
-  const fee = price * FEE;
+export const split = (price: number, royaltyPct: number, resale: boolean, feeBps = PREVIEW_FEE_BPS) => {
+  const fee = price * feeBps / 10_000;
   const royalty = resale ? price * royaltyPct / 100 : 0;
   return { fee, royalty, rest: price - fee - royalty };
 };
