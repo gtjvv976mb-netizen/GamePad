@@ -262,6 +262,7 @@ p, .sub, .opt small, .legend, .empty span, .busy .card span { text-wrap: pretty;
 .kv dt { font: 600 var(--fs-sm)/1.6 var(--ui); color: var(--dim); }
 .kv dd { margin: 0; text-align: right; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .kv select { background: none; border: 0; color: inherit; font: inherit; text-align: right; }
+.kv a { color: inherit; text-underline-offset: 3px; text-decoration-color: var(--line-strong); }
 .acts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: var(--fs-sm); }
 .acts li { display: flex; justify-content: space-between; gap: 12px; color: var(--dim); }
 .acts li b { color: var(--text); font-weight: 650; }
@@ -278,6 +279,8 @@ p, .sub, .opt small, .legend, .empty span, .busy .card span { text-wrap: pretty;
 .sheet .x { position: absolute; top: 14px; right: 14px; width: 44px; height: 44px; }
 .opts { display: flex; flex-direction: column; gap: 8px; }
 .opt { display: grid; grid-template-columns: 40px 1fr auto; gap: 12px; align-items: center; padding: 12px; border-radius: var(--r-tile); border: 1px solid var(--line); background: rgba(243,241,234,.04); text-align: left; }
+/* wallet apps offered as links when no wallet is installed: same look as the buttons */
+a.opt { color: var(--text); text-decoration: none; }
 .opt:not([disabled]):hover { border-color: var(--text); background: rgba(243,241,234,.08); }
 .opt[disabled] { opacity: .55; cursor: progress; }
 .opt[aria-busy="true"] { opacity: 1; border-color: var(--text); }

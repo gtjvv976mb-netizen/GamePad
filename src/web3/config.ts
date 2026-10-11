@@ -1,39 +1,27 @@
-import { createConfig, http } from "wagmi";
-import { baseSepolia, sepolia } from "wagmi/chains";
-import { coinbaseWallet, injected } from "wagmi/connectors";
-import type { Address } from "viem";
+import { address, createSolanaRpc, type Address } from "@solana/kit";
 
-// Test networks only. Mainnet stays off until the owner decides to launch with real money.
-export const CHAINS = [baseSepolia, sepolia] as const;
-export type ChainId = (typeof CHAINS)[number]["id"];
-
-export const config = createConfig({
-  chains: CHAINS,
-  connectors: [
-    injected({ shimDisconnect: true }),
-    // Coinbase Smart Wallet works with a passkey, no browser extension needed.
-    coinbaseWallet({ appName: "GamePad", preference: { options: "smartWalletOnly", telemetry: false } }),
-  ],
-  transports: { [baseSepolia.id]: http(), [sepolia.id]: http() },
-});
+// Solana devnet only. Mainnet stays off until the owner decides to launch with real money.
+export const CLUSTER = "devnet" as const;
+/** Wallet Standard chain id the wallet signs and sends on. */
+export const CHAIN = "solana:devnet" as const;
 
 const env = import.meta.env;
-const addr = (v?: string) => (v && /^0x[0-9a-fA-F]{40}$/.test(v) ? (v as Address) : undefined);
+export const RPC_URL: string = env.VITE_SOLANA_RPC || "https://api.devnet.solana.com";
+export const rpc = createSolanaRpc(RPC_URL);
 
-/** Store contract per chain. Missing means that network runs in preview mode. */
-export const STORE_ADDRESS: Record<number, Address | undefined> = {
-  [baseSepolia.id]: addr(env.VITE_STORE_ADDRESS_BASE_SEPOLIA),
-  [sepolia.id]: addr(env.VITE_STORE_ADDRESS_SEPOLIA),
+const parse = (v?: string): Address | undefined => {
+  try { return v && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(v) ? address(v) : undefined; } catch { return undefined; }
 };
 
-export const chainName = (id?: number) => CHAINS.find(c => c.id === id)?.name ?? "Unsupported network";
+/** The GamePad store program on devnet. Missing means the store runs in preview mode. */
+export const STORE_PROGRAM: Address | undefined = parse(env.VITE_STORE_PROGRAM_DEVNET);
+
+export const NETWORK_NAME = "Solana devnet";
 /** Two-line network label for the rail: the chain, then what kind of network it is. */
-export const chainLabel = (id?: number): [string, string] => (id === sepolia.id ? ["Ethereum", "testnet"] : ["Base", "testnet"]);
-export const explorerTx = (chainId: number, hash: string) => {
-  const c = CHAINS.find(x => x.id === chainId);
-  return c?.blockExplorers?.default.url ? `${c.blockExplorers.default.url}/tx/${hash}` : undefined;
-};
+export const NETWORK_LABEL: [string, string] = ["Solana", "devnet"];
+export const explorerTx = (signature: string) => `https://explorer.solana.com/tx/${signature}?cluster=${CLUSTER}`;
+export const explorerAddress = (a: string) => `https://explorer.solana.com/address/${a}?cluster=${CLUSTER}`;
 
-declare module "wagmi" {
-  interface Register { config: typeof config }
-}
+export const LAMPORTS_PER_SOL = 1_000_000_000;
+export const toLamports = (sol: number) => BigInt(Math.round(sol * LAMPORTS_PER_SOL));
+export const toSol = (lamports: bigint | number) => Number(lamports) / LAMPORTS_PER_SOL;

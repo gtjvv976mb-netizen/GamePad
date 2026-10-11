@@ -1,25 +1,26 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { GAMES } from "../data/games";
 
-export type Listing = { id: number; gameId: number; seller: string; priceEth: number; mine: boolean };
-export type Activity = { kind: "buy" | "list" | "cancel" | "sold" | "bought-used" | "withdraw" | "publish"; gameId: number; priceEth: number; at: number; tx?: string };
-export type CustomGame = { chainId: number; title: string; genre: string; priceEth: number; royaltyPct: number; cover?: string; studio?: string };
+export type Listing = { id: number; gameId: number; seller: string; price: number; mine: boolean };
+/** Prices are in SOL. `tx` is the transaction signature on devnet, live mode only. */
+export type Activity = { kind: "buy" | "list" | "cancel" | "sold" | "bought-used" | "publish"; gameId: number; price: number; at: number; tx?: string };
+export type CustomGame = { chainId: number; title: string; genre: string; price: number; royaltyPct: number; cover?: string; studio?: string };
 
 export type StoreApi = {
-  /** live = real transactions on a test network, preview = simulated in this browser */
+  /** live = real transactions on Solana devnet, preview = simulated in this browser */
   mode: "live" | "preview";
   owned: Record<number, number>;
   listings: Listing[];
-  owedEth: number;
+  /** the wallet's SOL balance, live mode only. Sales and royalties land here directly. */
+  balance?: number;
   activity: Activity[];
   published: CustomGame[];
   busy: string | null;
   // live mode resolves with the explorer link for the transaction
-  buy(gameId: number, priceEth: number): Promise<string | void>;
-  list(gameId: number, priceEth: number): Promise<string | void>;
+  buy(gameId: number, price: number): Promise<string | void>;
+  list(gameId: number, price: number): Promise<string | void>;
   cancel(listingId: number): Promise<string | void>;
   buyListing(listing: Listing): Promise<string | void>;
-  withdraw(): Promise<string | void>;
   publish(g: Omit<CustomGame, "chainId">): Promise<number>;
   reset?(): void;
 };
@@ -33,11 +34,12 @@ export const useStore = () => {
 
 /* ---------------- preview mode: everything simulated, saved in this browser ---------------- */
 
-const KEY = "gamepad-preview-v1";
-const HANDLES = ["vexa.eth", "kirin.base", "nightowl.eth", "mossy.base", "rainjump.eth", "saltyd0g.base", "lumi.eth", "pix3l.base", "0x9f3a…12ab", "0x77c1…c0de"];
+// v2: prices moved from ETH to SOL, so v1 data is left behind.
+const KEY = "gamepad-preview-v2";
+const HANDLES = ["vexa.sol", "kirin.sol", "nightowl.sol", "mossy.sol", "rainjump.sol", "saltyd0g.sol", "lumi.sol", "pix3l.sol", "7xKpQ2rTn8vLmW4dZ3fQa", "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM"];
 const FEE = 0.1;
 
-type PreviewState = { owned: Record<number, number>; listings: Listing[]; owedEth: number; activity: Activity[]; published: CustomGame[]; nextListing: number };
+type PreviewState = { owned: Record<number, number>; listings: Listing[]; activity: Activity[]; published: CustomGame[]; nextListing: number };
 
 function seed(): PreviewState {
   // Deterministic pseudo-random so the preview market looks the same on every load.
@@ -46,12 +48,12 @@ function seed(): PreviewState {
   const listings: Listing[] = [];
   let id = 1;
   for (const g of GAMES) {
-    if (!g.priceEth) continue;
+    if (!g.price) continue;
     const n = 1 + Math.floor(rnd() * 3);
     for (let i = 0; i < n; i++)
-      listings.push({ id: id++, gameId: g.chainId, seller: HANDLES[Math.floor(rnd() * HANDLES.length)], priceEth: +(g.priceEth * (0.55 + rnd() * 0.35)).toFixed(4), mine: false });
+      listings.push({ id: id++, gameId: g.chainId, seller: HANDLES[Math.floor(rnd() * HANDLES.length)], price: +(g.price * (0.55 + rnd() * 0.35)).toFixed(3), mine: false });
   }
-  return { owned: {}, listings, owedEth: 0, activity: [], published: [], nextListing: id };
+  return { owned: {}, listings, activity: [], published: [], nextListing: id };
 }
 
 function load(): PreviewState {
@@ -92,31 +94,30 @@ export function PreviewStore({ children }: { children: ReactNode }) {
     mode: "preview",
     ...st,
     busy,
-    buy: (gameId, priceEth) => run("Buying", s => ({
-      ...s, owned: { ...s.owned, [gameId]: (s.owned[gameId] ?? 0) + 1 }, activity: log(s, { kind: "buy", gameId, priceEth }),
+    buy: (gameId, price) => run("Buying", s => ({
+      ...s, owned: { ...s.owned, [gameId]: (s.owned[gameId] ?? 0) + 1 }, activity: log(s, { kind: "buy", gameId, price }),
     })),
-    list: (gameId, priceEth) => run("Listing", s => ({
+    list: (gameId, price) => run("Listing", s => ({
       ...s,
       owned: { ...s.owned, [gameId]: Math.max(0, (s.owned[gameId] ?? 0) - 1) },
-      listings: [{ id: s.nextListing, gameId, seller: "You", priceEth, mine: true }, ...s.listings],
+      listings: [{ id: s.nextListing, gameId, seller: "You", price, mine: true }, ...s.listings],
       nextListing: s.nextListing + 1,
-      activity: log(s, { kind: "list", gameId, priceEth }),
+      activity: log(s, { kind: "list", gameId, price }),
     })),
     cancel: listingId => run("Cancelling", s => {
       const l = s.listings.find(x => x.id === listingId);
       if (!l) return s;
-      return { ...s, listings: s.listings.filter(x => x.id !== listingId), owned: { ...s.owned, [l.gameId]: (s.owned[l.gameId] ?? 0) + 1 }, activity: log(s, { kind: "cancel", gameId: l.gameId, priceEth: l.priceEth }) };
+      return { ...s, listings: s.listings.filter(x => x.id !== listingId), owned: { ...s.owned, [l.gameId]: (s.owned[l.gameId] ?? 0) + 1 }, activity: log(s, { kind: "cancel", gameId: l.gameId, price: l.price }) };
     }),
     buyListing: l => run("Buying", s => ({
       ...s,
       listings: s.listings.filter(x => x.id !== l.id),
       owned: { ...s.owned, [l.gameId]: (s.owned[l.gameId] ?? 0) + 1 },
-      activity: log(s, { kind: "bought-used", gameId: l.gameId, priceEth: l.priceEth }),
+      activity: log(s, { kind: "bought-used", gameId: l.gameId, price: l.price }),
     })),
-    withdraw: () => run("Withdrawing", s => ({ ...s, owedEth: 0, activity: log(s, { kind: "withdraw", gameId: 0, priceEth: s.owedEth }) })),
     publish: async g => {
       const chainId = 1000 + st.published.length + 1;
-      await run("Publishing", s => ({ ...s, published: [...s.published, { ...g, chainId }], activity: log(s, { kind: "publish", gameId: chainId, priceEth: g.priceEth }) }));
+      await run("Publishing", s => ({ ...s, published: [...s.published, { ...g, chainId }], activity: log(s, { kind: "publish", gameId: chainId, price: g.price }) }));
       return chainId;
     },
     reset: () => setSt(seed()),
@@ -125,9 +126,9 @@ export function PreviewStore({ children }: { children: ReactNode }) {
   return <StoreCtx.Provider value={api}>{children}</StoreCtx.Provider>;
 }
 
-/** Share of a sale that reaches each party, matching the contract's split. */
-export const split = (priceEth: number, royaltyPct: number, resale: boolean) => {
-  const fee = priceEth * FEE;
-  const royalty = resale ? priceEth * royaltyPct / 100 : 0;
-  return { fee, royalty, rest: priceEth - fee - royalty };
+/** Share of a sale that reaches each party, matching the store program's split. */
+export const split = (price: number, royaltyPct: number, resale: boolean) => {
+  const fee = price * FEE;
+  const royalty = resale ? price * royaltyPct / 100 : 0;
+  return { fee, royalty, rest: price - fee - royalty };
 };

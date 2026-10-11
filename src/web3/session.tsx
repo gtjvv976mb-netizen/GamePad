@@ -1,29 +1,30 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useAccount, useChainId, useConnect, useDisconnect, usePublicClient, useSignMessage, useSwitchChain, type Connector } from "wagmi";
-import { verifyMessage, type Address } from "viem";
-import { createSiweMessage, generateSiweNonce } from "viem/siwe";
+import type { WalletAccount } from "@wallet-standard/base";
+import type { Instruction } from "@solana/kit";
 import { AnimatePresence, motion } from "motion/react";
-import { CHAINS, STORE_ADDRESS, chainName, type ChainId } from "./config";
-import { IconClose, IconEye, IconFingerprint, IconWallet } from "../ui/Icons";
+import { NETWORK_NAME, STORE_PROGRAM } from "./config";
+import { sendWithWallet, signIn as siws, watchWallets, type Proof, type SolWallet } from "./wallets";
+import { IconClose, IconEye, IconWallet } from "../ui/Icons";
 import { AGlyph } from "../ui/Logo";
 import { useNav } from "../input/nav";
-import { errorText } from "../lib/format";
+import { errorText, short } from "../lib/format";
 
-type Proof = { address: Address; chainId: number; message: string; signature: `0x${string}`; at: number };
 type Session = {
-  address?: Address;
-  /** signed in with Sign-In with Ethereum (EIP-4361) for this address */
+  /** the connected Solana account (base58) */
+  address?: string;
+  walletName?: string;
+  /** signed in with Sign In With Solana for this address */
   signedIn: boolean;
   guest: boolean;
-  chainId: ChainId;
-  /** a store contract is configured on this network, so purchases are real test transactions */
+  /** the store program is deployed on devnet and a wallet is connected, so purchases are real devnet transactions */
   live: boolean;
   /** the wallet sheet is up, so the app behind it is inert */
   sheetOpen: boolean;
   open(): void;
   signIn(): Promise<void>;
   signOut(): void;
-  switchTo(id: ChainId): void;
+  /** signs the instructions in the wallet as one transaction and sends it to devnet; resolves to its signature */
+  send(ixs: readonly Instruction[]): Promise<string>;
 };
 
 const Ctx = createContext<Session | null>(null);
@@ -33,76 +34,104 @@ export const useSession = () => {
   return s;
 };
 
-const PROOF = "gamepad-siwe";
+const PROOF = "gamepad-siws";
 const GUEST = "gamepad-guest";
+/** the wallet used last, reconnected silently on the next visit */
+const LAST = "gamepad-wallet";
 const read = <T,>(k: string): T | null => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) as T : null; } catch { return null; } };
 const write = (k: string, v: unknown) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); } catch { /* storage blocked */ } };
 
 export function SessionProvider({ children }: { children: ReactNode }) {
-  const { address, isConnected } = useAccount();
-  const chainId = useChainId();
-  const { disconnect } = useDisconnect();
-  const { switchChain } = useSwitchChain();
-  const { signMessageAsync } = useSignMessage();
-  const client = usePublicClient();
+  const [wallets, setWallets] = useState<SolWallet[]>([]);
+  const [wallet, setWallet] = useState<SolWallet | null>(null);
+  const [account, setAccount] = useState<WalletAccount | null>(null);
   const [proof, setProof] = useState<Proof | null>(() => read<Proof>(PROOF));
   const [guest, setGuest] = useState<boolean>(() => !!read<boolean>(GUEST));
   const [sheet, setSheet] = useState(false);
+  const tried = useRef(false);
 
-  const signedIn = !!(address && proof && proof.address.toLowerCase() === address.toLowerCase());
+  useEffect(() => watchWallets(setWallets), []);
+
+  // Reconnect the last wallet without a prompt once it registers; wallets that need a prompt just stay disconnected.
+  useEffect(() => {
+    if (tried.current) return;
+    const last = read<string>(LAST);
+    const w = last && wallets.find(x => x.name === last);
+    if (!w) return;
+    tried.current = true;
+    w.features["standard:connect"].connect({ silent: true })
+      .then(({ accounts }) => { if (accounts[0]) { setWallet(w); setAccount(accounts[0]); } })
+      .catch(() => { /* not authorized any more */ });
+  }, [wallets]);
+
+  // Follow account switches and disconnects made inside the wallet.
+  useEffect(() => wallet?.features["standard:events"]?.on("change", ({ accounts }) => {
+    if (accounts) setAccount(accounts[0] ?? null);
+  }), [wallet]);
+
+  const connect = useCallback(async (w: SolWallet) => {
+    const { accounts } = await w.features["standard:connect"].connect();
+    if (!accounts[0]) throw new Error("The wallet didn't share an account.");
+    setWallet(w); setAccount(accounts[0]);
+    write(LAST, w.name); write(GUEST, null); setGuest(false);
+    return accounts[0];
+  }, []);
+
+  const address = account?.address;
+  const signedIn = !!(address && proof && proof.address === address);
 
   const signIn = useCallback(async () => {
-    if (!address) return;
-    const message = createSiweMessage({
-      address, chainId, domain: location.host || "gamepad.local", uri: location.origin.startsWith("http") ? location.origin : "https://gamepad.local",
-      nonce: generateSiweNonce(), version: "1", issuedAt: new Date(),
-      statement: "Sign in to GamePad. This is free and doesn't send a transaction.",
-    });
-    const signature = await signMessageAsync({ message });
-    // Smart wallets (ERC-1271/6492) need the chain to verify; plain keys verify locally.
-    let ok = false;
-    try { ok = client ? await client.verifySiweMessage({ message, signature }) : false; } catch { ok = false; }
-    if (!ok) ok = await verifyMessage({ address, message, signature }).catch(() => false);
-    if (!ok) throw new Error("That signature didn't match this wallet.");
-    const p = { address, chainId, message, signature, at: Date.now() };
+    if (!wallet || !account) return;
+    const p = await siws(wallet, account);
     write(PROOF, p); setProof(p);
-  }, [address, chainId, client, signMessageAsync]);
+  }, [wallet, account]);
 
   const signOut = useCallback(() => {
     write(PROOF, null); setProof(null);
     write(GUEST, null); setGuest(false);
-    if (isConnected) disconnect();
-  }, [disconnect, isConnected]);
+    write(LAST, null);
+    wallet?.features["standard:disconnect"]?.disconnect().catch(() => {});
+    setWallet(null); setAccount(null);
+  }, [wallet]);
+
+  const send = useCallback(async (ixs: readonly Instruction[]) => {
+    if (!wallet || !account) throw new Error("No wallet connected.");
+    return sendWithWallet(wallet, account, ixs);
+  }, [wallet, account]);
 
   const startGuest = useCallback(() => { write(GUEST, true); setGuest(true); setSheet(false); }, []);
 
   const value = useMemo<Session>(() => ({
-    address, signedIn, guest: guest && !isConnected, chainId,
-    live: isConnected && !!STORE_ADDRESS[chainId], sheetOpen: sheet,
-    open: () => setSheet(true), signIn, signOut,
-    switchTo: id => switchChain({ chainId: id }),
-  }), [address, signedIn, guest, isConnected, chainId, sheet, signIn, signOut, switchChain]);
+    address, walletName: wallet?.name, signedIn, guest: guest && !address,
+    live: !!address && !!STORE_PROGRAM, sheetOpen: sheet,
+    open: () => setSheet(true), signIn, signOut, send,
+  }), [address, wallet, signedIn, guest, sheet, signIn, signOut, send]);
 
   return (
     <Ctx.Provider value={value}>
       {children}
-      <AnimatePresence>{sheet && <WalletSheet onClose={() => setSheet(false)} onGuest={startGuest} />}</AnimatePresence>
+      <AnimatePresence>{sheet && <WalletSheet wallets={wallets} connect={connect} onClose={() => setSheet(false)} onGuest={startGuest} />}</AnimatePresence>
     </Ctx.Provider>
   );
 }
 
-function WalletSheet({ onClose, onGuest }: { onClose(): void; onGuest(): void }) {
-  const { connectors, connectAsync, isPending } = useConnect();
-  const { isConnected, address } = useAccount();
+/** Wallet apps that open GamePad in their own browser, offered when no wallet is installed here. */
+const here = () => encodeURIComponent(location.href.split("#")[0]);
+const APPS = [
+  { name: "Phantom", href: () => `https://phantom.app/ul/browse/${here()}?ref=${here()}` },
+  { name: "Solflare", href: () => `https://solflare.com/ul/v1/browse/${here()}?ref=${here()}` },
+];
+
+function WalletSheet({ wallets, connect, onClose, onGuest }: { wallets: SolWallet[]; connect(w: SolWallet): Promise<WalletAccount>; onClose(): void; onGuest(): void }) {
   const session = useContext(Ctx);
   const [err, setErr] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null);
-  const [step, setStep] = useState<"pick" | "sign">(isConnected ? "sign" : "pick");
+  const [step, setStep] = useState<"pick" | "sign">(session?.address ? "sign" : "pick");
   const box = useRef<HTMLDivElement>(null);
 
   // The pad and arrow keys move between the sheet's buttons; A presses the focused one, B closes.
   useNav(a => {
-    const items = [...(box.current?.querySelectorAll<HTMLElement>("button:not([disabled]):not(.x)") ?? [])];
+    const items = [...(box.current?.querySelectorAll<HTMLElement>("button:not([disabled]):not(.x), a.opt") ?? [])];
     const i = items.indexOf(document.activeElement as HTMLElement);
     if (a === "back") onClose();
     else if (a === "down" || a === "right") items[(i + 1) % items.length]?.focus();
@@ -119,12 +148,9 @@ function WalletSheet({ onClose, onGuest }: { onClose(): void; onGuest(): void })
 
   useEffect(() => { if (session?.signedIn) onClose(); }, [session?.signedIn, onClose]);
 
-  // EIP-6963 discovery lists each installed wallet by name; drop the generic fallback when one is found.
-  const list = connectors.filter((c, _, all) => !(c.id === "injected" && all.some(o => o.type === "injected" && o.id !== "injected")));
-
-  const connect = async (c: Connector) => {
-    setErr(null); setPending(c.uid);
-    try { await connectAsync({ connector: c }); setStep("sign"); }
+  const pick = async (w: SolWallet) => {
+    setErr(null); setPending(w.name);
+    try { await connect(w); setStep("sign"); }
     catch (e) { setErr(errorText(e)); }
     finally { setPending(null); }
   };
@@ -141,13 +167,19 @@ function WalletSheet({ onClose, onGuest }: { onClose(): void; onGuest(): void })
         <button className="icon-btn x" onClick={onClose} aria-label="Close"><IconClose /></button>
         {step === "pick" ? <>
           <h2 id="sheet-h">Connect</h2>
-          <p>Your wallet is your GamePad account. Games you buy are licenses it holds. Test networks only for now ({CHAINS.map(c => c.name).join(", ")}).</p>
+          <p>Your Solana wallet is your GamePad account. Games you buy are licenses the store keeps under your address. {NETWORK_NAME} only for now.</p>
           <div className="opts">
-            {list.map(c => (
-              <button key={c.uid} className="opt" onClick={() => connect(c)} disabled={isPending} aria-busy={pending === c.uid || undefined}>
-                {c.icon ? <img src={c.icon} alt="" /> : <span className="ph">{c.id === "coinbaseWalletSDK" ? <IconFingerprint /> : <IconWallet />}</span>}
-                <span>{c.id === "injected" ? "Browser wallet" : c.name}<small>{pending === c.uid ? "Waiting for your wallet…" : c.id === "coinbaseWalletSDK" ? "Passkey smart wallet, no extension needed" : c.id === "injected" ? "MetaMask, Rabby or any installed wallet" : "Installed in this browser"}</small></span>
+            {wallets.map(w => (
+              <button key={w.name} className="opt" onClick={() => pick(w)} disabled={!!pending} aria-busy={pending === w.name || undefined}>
+                {w.icon ? <img src={w.icon} alt="" /> : <span className="ph"><IconWallet /></span>}
+                <span>{w.name}<small>{pending === w.name ? "Waiting for your wallet…" : "Installed in this browser"}</small></span>
               </button>
+            ))}
+            {!wallets.length && APPS.map(a => (
+              <a key={a.name} className="opt" href={a.href()} target="_blank" rel="noreferrer">
+                <span className="ph"><IconWallet /></span>
+                <span>{a.name}<small>Opens GamePad in the {a.name} app, or gets the wallet</small></span>
+              </a>
             ))}
             <button className="opt" onClick={onGuest}>
               <span className="ph"><IconEye /></span>
@@ -156,12 +188,12 @@ function WalletSheet({ onClose, onGuest }: { onClose(): void; onGuest(): void })
           </div>
         </> : <>
           <h2 id="sheet-h">Sign in</h2>
-          <p>Sign a message to prove {address ? <span className="mono">{address.slice(0, 6)}…{address.slice(-4)}</span> : "this wallet"} is yours. It's free and sends no transaction.</p>
+          <p>Sign a message to prove {session?.address ? <span className="mono">{short(session.address)}</span> : "this wallet"} is yours. It's free and sends no transaction.</p>
           <div className="actions">
             <button className="btn primary" onClick={sign}><AGlyph />Sign in</button>
             <button className="btn noglyph" onClick={onClose}>Not now</button>
           </div>
-          {session && !STORE_ADDRESS[session.chainId] && <p className="note">The store isn't deployed on {chainName(session.chainId)} yet, so buying stays in preview mode on this network.</p>}
+          {!STORE_PROGRAM && <p className="note">The store isn't on {NETWORK_NAME} yet, so buying stays in preview mode for now.</p>}
         </>}
         {err && <div className="err" role="alert">{err}</div>}
       </motion.div>

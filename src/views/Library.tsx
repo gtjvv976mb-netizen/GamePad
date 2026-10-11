@@ -4,7 +4,7 @@ import { useStore, split } from "../state/store";
 import { useCatalog, textureFor, thumbFor } from "../state/catalog";
 import { useScene } from "../state/scene";
 import { useNav } from "../input/nav";
-import { eth } from "../lib/format";
+import { sol } from "../lib/format";
 import { useSession } from "../web3/session";
 import { useAct } from "./common";
 import { HOUSE_PALETTE } from "../data/games";
@@ -46,11 +46,11 @@ export function LibraryView({ go, focus }: { go: Go; focus?: string }) {
 
   function startSell() {
     if (!game) return;
-    setPrice(String(Number((game.priceEth * 0.8).toFixed(4))));
+    setPrice(String(Number((game.price * 0.8).toFixed(3))));
     setSelling(true);
   }
   const p = Number(price);
-  const valid = !!game && p > 0 && p < 100;
+  const valid = !!game && p > 0 && p < 1000;
   const cut = game && valid ? split(p, game.royaltyPct, true) : null;
   const copies = game ? store.owned[game.chainId] ?? 0 : 0;
 
@@ -94,15 +94,15 @@ export function LibraryView({ go, focus }: { go: Go; focus?: string }) {
             if (valid) act(() => store.list(game!.chainId, p), `${game!.title} is listed on the market`).then(() => setSelling(false));
           }}>
             <label className="price-in">
-              <span className="sr">Asking price in ETH</span>
+              <span className="sr">Asking price in SOL</span>
               <input autoFocus inputMode="decimal" value={price} onChange={e => setPrice(e.target.value)} aria-describedby="cut" aria-invalid={!valid} />
-              <span>ETH</span>
+              <span>SOL</span>
             </label>
             <button className="btn primary" type="submit" disabled={!valid}><AGlyph />List it</button>
             <button className="btn noglyph" type="button" onClick={() => setSelling(false)}>Cancel</button>
             {cut
-              ? <div id="cut" className="legend full"><span>You get <b>{eth(cut.rest)}</b></span><span>{game!.studio} gets <b>{eth(cut.royalty)}</b> ({game!.royaltyPct}%)</span><span>GamePad <b>{eth(cut.fee)}</b></span></div>
-              : <div id="cut" className="legend full">{p >= 100 ? "Keep the price under 100 ETH" : "Enter a price above 0"}</div>}
+              ? <div id="cut" className="legend full"><span>You get <b>{sol(cut.rest)}</b></span><span>{game!.studio} gets <b>{sol(cut.royalty)}</b> ({game!.royaltyPct}%)</span><span>GamePad <b>{sol(cut.fee)}</b></span></div>
+              : <div id="cut" className="legend full">{p >= 1000 ? "Keep the price under 1,000 SOL" : "Enter a price above 0"}</div>}
           </form>
         )}
       </section>
