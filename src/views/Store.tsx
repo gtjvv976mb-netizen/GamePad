@@ -25,6 +25,13 @@ export function StoreView({ go, focus }: { go: Go; focus?: string }) {
     const want = focus ?? sessionStorage.getItem(KEY) ?? "hcr";
     return Math.max(0, catalog.findIndex(g => g.slug === want));
   });
+  const focusedSlug = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (!focus) { focusedSlug.current = undefined; return; }
+    if (focusedSlug.current === focus) return;
+    const i = catalog.findIndex(g => g.slug === focus);
+    if (i >= 0) { focusedSlug.current = focus; setSel(i); }
+  }, [focus, catalog]);
   const game = catalog[sel] ?? catalog[0];
   const tilesRef = useRef<HTMLDivElement>(null);
   const refocus = useRef(false);
@@ -75,7 +82,10 @@ export function StoreView({ go, focus }: { go: Go; focus?: string }) {
   const scene = useMemo(() => ({ kind: "card" as const, texture: textureFor(game), src: thumbFor(game), key: game.slug, palette: game.palette, side: "right" as const }), [game]);
   useScene(scene);
 
-  const buy = () => act(() => store.buy(game.chainId, game.price), `${game.title} is in your library`);
+  const buy = () => {
+    if (game.active === false) return;
+    return act(() => store.buy(game.chainId, game.price), `${game.title} is in your library`);
+  };
 
   useNav(a => {
     if (a === "left") pick(sel - 1);
@@ -86,7 +96,7 @@ export function StoreView({ go, focus }: { go: Go; focus?: string }) {
     else if (a === "alt" && floor !== null) go("market", game.slug);
   });
 
-  const studioCut = split(game.price, game.royaltyPct, false).rest;
+  const studioCut = split(game.price, game.royaltyPct, false, store.feeBps).rest;
 
   return (
     <>
@@ -108,7 +118,7 @@ export function StoreView({ go, focus }: { go: Go; focus?: string }) {
         <div className="actions">
           {owned
             ? <button className="btn owned-chip" onClick={() => go("library", game.slug)}><span className="glyph">A</span><span>In your library{owned > 1 ? ` ×${owned}` : ""}</span></button>
-            : <button className="btn primary" onClick={buy}><AGlyph />{game.price ? `Buy · ${sol(game.price)}` : "Get it free"}</button>}
+            : <button className="btn primary" onClick={buy} disabled={game.active === false}><AGlyph />{game.active === false ? "Not on sale" : game.price ? `Buy · ${sol(game.price)}` : "Get it free"}</button>}
           {floor !== null && !owned && <button className="btn" onClick={() => go("market", game.slug)}><span className="glyph">X</span>{used.length} used</button>}
         </div>
       </section>

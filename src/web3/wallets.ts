@@ -13,6 +13,7 @@ import {
 } from "@solana/kit";
 import { ed25519 } from "@noble/curves/ed25519.js";
 import { CHAIN, CLUSTER, rpc } from "./config";
+import { assertDevnetRpc } from "./devnet";
 
 type Connect = { "standard:connect": { connect(input?: { silent?: boolean }): Promise<{ accounts: readonly WalletAccount[] }> } };
 type Disconnect = { "standard:disconnect"?: { disconnect(): Promise<void> } };
@@ -80,6 +81,7 @@ const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 /** Signs the instructions as one transaction in the wallet, sends it to devnet and waits until it is confirmed. */
 export async function sendWithWallet(wallet: SolWallet, account: WalletAccount, instructions: readonly Instruction[]): Promise<string> {
+  await assertDevnetRpc(rpc);
   const f = wallet.features;
   const versions = f["solana:signTransaction"]?.supportedTransactionVersions ?? f["solana:signAndSendTransaction"]?.supportedTransactionVersions ?? ["legacy"];
   const { value: blockhash } = await rpc.getLatestBlockhash({ commitment: "confirmed" }).send();

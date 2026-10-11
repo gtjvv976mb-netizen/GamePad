@@ -55,7 +55,7 @@ export function MarketView({ go, focus }: { go: Go; focus?: string }) {
   });
 
   const r = rows[cur];
-  const cut = r ? split(r.l.price, r.g.royaltyPct, true) : null;
+  const cut = r ? split(r.l.price, r.g.royaltyPct, true, store.feeBps) : null;
 
   return (
     <>

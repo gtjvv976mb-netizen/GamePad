@@ -28,6 +28,7 @@ test("the client builds every instruction exactly like the program", async () =>
   const built: Record<string, Instruction> = {
     initialize: await initializeIx(P, k.authority, 1000, k.treasury),
     publishGame: await publishGameIx(P, k.studio, 17n, { price: 250_000_000n, royaltyBps: 800, uri: "ipfs://pending/ndp.json" }),
+    publishBootstrapGame: await publishGameIx(P, k.studio, 1n, { price: 250_000_000n, royaltyBps: 800, uri: "ipfs://pending/ndp.json" }, k.authority),
     updateGame: await updateGameIx(P, k.studio, 3n, 120_000_000n, false),
     buy: await buyIx(P, { buyer: k.buyer, gameId: 2n, studio: k.studio, treasury: k.treasury, expectedPrice: 250_000_000n }),
     list: await listIx(P, { seller: k.seller, gameId: 2n, price: 200_000_000n, nextId: 9n }),

@@ -8,6 +8,7 @@ import {
 } from "@solana/kit";
 
 export const SYSTEM_PROGRAM = "11111111111111111111111111111111" as Address;
+export const UPGRADEABLE_LOADER = "BPFLoaderUpgradeab1e11111111111111111111111" as Address;
 
 const IX = {
   initialize: [175, 175, 109, 31, 13, 152, 155, 237],
@@ -78,6 +79,7 @@ const pda = async (programAddress: Address, seeds: Parameters<typeof getProgramD
   (await getProgramDerivedAddress({ programAddress, seeds }))[0];
 
 export const storePda = (program: Address) => pda(program, ["store"]);
+export const programDataPda = (program: Address) => pda(UPGRADEABLE_LOADER, [addr.encode(program)]);
 export const gamePda = (program: Address, id: bigint | number) => pda(program, ["game", u64.encode(BigInt(id))]);
 export const licensePda = (program: Address, gameId: bigint | number, owner: Address) => pda(program, ["license", u64.encode(BigInt(gameId)), addr.encode(owner)]);
 export const listingPda = (program: Address, id: bigint | number) => pda(program, ["listing", u64.encode(BigInt(id))]);
@@ -104,14 +106,14 @@ const listArgs = getStructEncoder([["gameId", getU64Encoder()], ["price", getU64
 const idArg = getStructEncoder([["id", getU64Encoder()]]);
 
 export async function initializeIx(program: Address, authority: Address, feeBps: number, treasury: Address): Promise<Instruction> {
-  return { programAddress: program, accounts: [w(await storePda(program)), ws(authority), r(SYSTEM_PROGRAM)], data: data(IX.initialize, feeArgs, { feeBps, treasury }) };
+  return { programAddress: program, accounts: [w(await storePda(program)), ws(authority), r(SYSTEM_PROGRAM), r(await programDataPda(program))], data: data(IX.initialize, feeArgs, { feeBps, treasury }) };
 }
 
 /** Publishes the store's next game; `nextId` is the store's game_count + 1. */
-export async function publishGameIx(program: Address, studio: Address, nextId: bigint, a: { price: bigint; royaltyBps: number; uri: string }): Promise<Instruction> {
+export async function publishGameIx(program: Address, studio: Address, nextId: bigint, a: { price: bigint; royaltyBps: number; uri: string }, bootstrapAuthority?: Address): Promise<Instruction> {
   return {
     programAddress: program,
-    accounts: [w(await storePda(program)), w(await gamePda(program, nextId)), ws(studio), r(SYSTEM_PROGRAM)],
+    accounts: [w(await storePda(program)), w(await gamePda(program, nextId)), ws(studio), r(SYSTEM_PROGRAM), bootstrapAuthority ? rs(bootstrapAuthority) : r(program)],
     data: data(IX.publishGame, publishArgs, a),
   };
 }
