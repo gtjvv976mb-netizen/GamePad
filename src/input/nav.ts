@@ -1,5 +1,6 @@
 import { useEffect, useRef, useSyncExternalStore } from "react";
 import { useIsPresent } from "motion/react";
+import { noteInput } from "../lib/show";
 
 // The whole store can be driven from a real game controller (Gamepad API) or the keyboard.
 // Inputs become a small set of actions that the active tab listens to.
@@ -11,6 +12,7 @@ let padName: string | null = null;
 const padListeners = new Set<() => void>();
 
 function emit(a: NavAction) {
+  noteInput();
   // newest subscriber first, so an open sheet gets input before the tab beneath it
   for (let i = handlers.length - 1; i >= 0; i--) if (handlers[i](a) === true) return;
 }

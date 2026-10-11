@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 import { AnimatePresence, motion, useIsPresent } from "motion/react";
 import { Stage, type Scene } from "./three/Stage";
 import { SceneCtx } from "./state/scene";
@@ -9,7 +9,9 @@ import { chainLabel } from "./web3/config";
 import { useNav, usePad } from "./input/nav";
 import { Logo, Seal } from "./ui/Logo";
 import { World } from "./ui/World";
-import { IconLibrary, IconMarket, IconProfile, IconStore, IconStudio } from "./ui/Icons";
+import { IconLibrary, IconMarket, IconPause, IconPlay, IconProfile, IconStore, IconStudio } from "./ui/Icons";
+import { motionOff, setMotionStopped, subscribeMotion } from "./lib/motion";
+import { useRevealed } from "./lib/show";
 import { StoreView } from "./views/Store";
 import { MarketView } from "./views/Market";
 import { LibraryView } from "./views/Library";
@@ -42,6 +44,7 @@ export default function App() {
   const store = useStore();
   const catalog = useCatalog();
   const narrow = useNarrow();
+  const arrived = useRevealed();
 
   useEffect(() => {
     const on = () => setTab(fromHash());
@@ -86,14 +89,15 @@ export default function App() {
       <World tint={calm(scene.palette[2])} />
       <Stage scene={scene} />
       <div className="shade" />
-      <div className="app" inert={!!store.busy || session.sheetOpen || undefined}>
+      {/* hidden while the fly-in runs; then the rail, top bar, hero and shelf arrive one after another */}
+      <div className={`app ${arrived ? "in" : "pre"}`} inert={!!store.busy || session.sheetOpen || !arrived || undefined}>
         <button className="btn sm skip" onClick={() => document.getElementById("main")?.focus()}>Skip to content</button>
         <nav className="rail" aria-label="GamePad">
           <HomeMark onClick={() => go("store")} />
           {pad && <span className="pad-hint" title={pad}>LB</span>}
           <div className="tabs" role="tablist" aria-orientation={narrow ? "horizontal" : "vertical"} onKeyDown={onTabKey}>
-            {TABS.map(t => (
-              <button key={t.id} role="tab" className="tab" aria-selected={tab === t.id} aria-controls="view" id={`tab-${t.id}`}
+            {TABS.map((t, i) => (
+              <button key={t.id} role="tab" className="tab" aria-selected={tab === t.id} aria-controls="view" id={`tab-${t.id}`} style={{ "--i": i } as CSSProperties}
                 tabIndex={tab === t.id ? 0 : -1} onClick={() => go(t.id)}>
                 {tab === t.id && <motion.i layoutId="tab-mark" className="tab-mark" aria-hidden="true" transition={{ type: "spring", stiffness: 520, damping: 40 }} />}
                 {t.icon}{t.label}
@@ -156,7 +160,8 @@ function View({ children }: { children: ReactNode }) {
   const present = useIsPresent();
   return (
     <motion.div className="view" inert={!present || undefined}
-      initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, transition: { duration: .14 } }} transition={{ duration: .28, ease: [.2, .8, .2, 1] }}>
+      initial={{ opacity: 0, x: 56, scale: .97 }} animate={{ opacity: 1, x: 0, scale: 1 }} exit={{ opacity: 0, x: -36, transition: { duration: .18 } }}
+      transition={{ type: "spring", stiffness: 260, damping: 28, mass: .9 }}>
       {children}
     </motion.div>
   );
@@ -186,6 +191,7 @@ function TopBar({ go, connect }: { go: Go; connect: boolean }) {
   return (
     <header className="topbar">
       <span className="grow" />
+      <MotionButton />
       {(s.address || s.guest) && (
         <span className={`mode ${store.mode === "live" ? "live" : ""}`} title={store.mode === "live" ? "Real transactions on a test network" : "Purchases are simulated in this browser"}>
           {store.mode === "live" ? "Testnet live" : "Preview"}
@@ -195,5 +201,16 @@ function TopBar({ go, connect }: { go: Go; connect: boolean }) {
         ? <button className="btn sm" onClick={() => go("profile")}><span className="mono">{s.address.slice(0, 6)}…{s.address.slice(-4)}</span></button>
         : connect && <button className="btn sm primary" onClick={s.open}>Connect wallet</button>}
     </header>
+  );
+}
+
+/** Stops every animation and clip, and starts them again. The choice stays in this browser. */
+function MotionButton() {
+  const off = useSyncExternalStore(subscribeMotion, motionOff, () => false);
+  return (
+    <button className="icon-btn motion-btn" aria-pressed={off} aria-label="Stop motion" title={off ? "Play motion" : "Stop motion"}
+      onClick={() => setMotionStopped(!off)}>
+      {off ? <IconPlay /> : <IconPause />}
+    </button>
   );
 }

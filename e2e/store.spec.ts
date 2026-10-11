@@ -16,7 +16,7 @@ const guest = async (page: Page) => {
 };
 
 test.beforeEach(async ({ page }) => {
-  await page.goto("./?no3d");
+  await page.goto("./?no3d&nointro");
 });
 
 test("every tab fits on one screen", async ({ page }) => {

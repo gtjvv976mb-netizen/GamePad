@@ -1,5 +1,5 @@
 import { Suspense, useMemo, useState, useSyncExternalStore } from "react";
-import { Canvas, useThree } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Environment, Lightformer, PerformanceMonitor, Sparkles } from "@react-three/drei";
 import * as THREE from "three";
 import { calm } from "./color";
@@ -7,7 +7,9 @@ import { Card, CARD_W } from "./Card";
 import { Logo3D, LogoGlow } from "./Logo3D";
 import { Shards } from "./Shards";
 import { FOIL, Logo } from "../ui/Logo";
-import { reducedMotion } from "../lib/motion";
+import { motionMode, motionOff, subscribeMotion } from "../lib/motion";
+import { arrivedAt, now, useRevealed } from "../lib/show";
+import { pointer, restless } from "./pointer";
 
 // four foil-colored studio lights at the corners, so the voxel mark and card edges pick up every hue
 const FOIL_AT: [number, number, number][] = [[-4, 2.5, 3], [4, 2.5, 3], [4, -2.5, 3], [-4, -2.5, 3]];
@@ -48,19 +50,20 @@ const flatMarkSize = () => {
   return Math.max(4, Math.floor(Math.min(0.34 * w, 460, right - left) / 16)) * 10;
 };
 
-/** No WebGL (or ?no3d): the same composition with CSS, a tilted cover (or the mark) in a glow of the game's color over the world clip. */
+/** No WebGL (or ?no3d): the same composition with CSS, a tilted cover (or the mark) over the world clip, which the game's color tints. */
 function FlatStage({ scene }: { scene: Scene }) {
   const markSize = useSyncExternalStore(onResize, flatMarkSize, () => 280);
-  const c = calm(scene.palette[2]);
+  // during the fly-in the stage is empty; the cover swings in as the camera arrives
+  const arrived = useRevealed();
   const side = scene.kind === "card" ? scene.side : scene.kind === "logo" ? "right" : "center";
   // Studio's generated title card is a canvas: show it as an image, so the flat stage keeps its focal object
   const src = useMemo(() => scene.kind === "card"
     ? scene.src ?? (scene.texture.image instanceof HTMLCanvasElement ? scene.texture.image.toDataURL("image/jpeg", 0.86) : undefined)
     : scene.kind === "hand" ? scene.textures[scene.selected]?.src : undefined, [scene]);
   return (
-    <div className={`stage flat ${side} ${scene.kind === "card" && scene.compact ? "compact" : ""}`} aria-hidden="true" style={{ background: `radial-gradient(50% 60% at ${side === "left" ? "30%" : side === "center" ? "50%" : "70%"} 45%, ${c}38, transparent 75%)` }}>
-      {src && <img src={src} alt="" />}
-      {scene.kind === "logo" && <div className="flat-logo"><Logo size={markSize} /></div>}
+    <div className={`stage flat ${side} ${scene.kind === "card" && scene.compact ? "compact" : ""}`} aria-hidden="true">
+      {arrived && src && <img src={src} alt="" />}
+      {arrived && scene.kind === "logo" && <div className="flat-logo"><Logo size={markSize} /></div>}
     </div>
   );
 }
@@ -87,6 +90,7 @@ function Contents({ scene }: { scene: Scene }) {
   // the rail takes 92px on the left, so "centered" means centered over the content, not the window
   const railX = narrow ? 0 : 46 * viewport.width / size.width;
   const accent = useMemo(() => calm(scene.palette[2]), [scene.palette]);
+  const still = useSyncExternalStore(subscribeMotion, motionOff, () => false);
   // Where the hero object sits, in world units.
   const layout = useMemo(() => {
     if (narrow) {
@@ -143,7 +147,31 @@ function Contents({ scene }: { scene: Scene }) {
       <LogoGlow />
 
       <Shards accent={accent} />
-      {!reducedMotion() && <Sparkles count={narrow ? 40 : 80} scale={[viewport.width, viewport.height, 3]} size={2.2} speed={0.25} opacity={0.5} color={accent} />}
+      {!still && <Sparkles count={narrow ? 70 : 150} scale={[viewport.width * 1.1, viewport.height * 1.1, 5]} size={narrow ? 2.6 : 3.2} speed={0.7} opacity={0.7} noise={1.4} color={accent} />}
+      <CameraRig />
     </>
   );
+}
+
+/**
+ * The camera: it dollies in as the store arrives, then drifts with the pointer (or by itself when no mouse is
+ * moving), so the cards, the voxels and the sparks slide against each other in depth.
+ */
+function CameraRig() {
+  const { camera } = useThree();
+  const aim = useMemo(() => new THREE.Vector3(), []);
+  useFrame((st, dt) => {
+    const full = motionMode() === "full";
+    const clock = now(), t = st.clock.elapsedTime;
+    const arrive = Math.min(1, Math.max(0, (clock - arrivedAt()) / 1.6));
+    const auto = restless(clock);
+    const x = full ? pointer.x * (1 - auto) * 0.45 + Math.sin(t * 0.21) * 0.35 * auto : 0;
+    const y = full ? -pointer.y * (1 - auto) * 0.28 + Math.sin(t * 0.33) * 0.16 * auto : 0;
+    const z = 6.2 + (full ? (1 - (1 - (1 - arrive) ** 3)) * 2.4 : 0);
+    camera.position.x = THREE.MathUtils.damp(camera.position.x, x, 2.2, dt);
+    camera.position.y = THREE.MathUtils.damp(camera.position.y, y, 2.2, dt);
+    camera.position.z = THREE.MathUtils.damp(camera.position.z, z, 4, dt);
+    camera.lookAt(aim.set(0, 0, 0));
+  });
+  return null;
 }

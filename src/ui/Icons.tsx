@@ -17,3 +17,5 @@ export const IconExternal = () => <I d="M14 4h6v6m0-6-9 9M18 14v4a2 2 0 0 1-2 2H
 export const IconWallet = () => <I d="M19 8V6a1 1 0 0 0-1-1H6.5a2.5 2.5 0 0 0 0 5H19a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H6a2 2 0 0 1-2-2V7.5M16 14h.5" />;
 export const IconFingerprint = () => <I d="M4.5 10a8 8 0 0 1 15 0M7 12a5 5 0 0 1 10 0v1.5c0 1.8-.3 3.4-.9 4.8M12 12v2.5c0 2.2-.6 4.1-1.6 5.5M9.5 13.5c0 2.3-.5 4.1-1.4 5.3" />;
 export const IconEye = () => <I d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />;
+export const IconPause = () => <I d="M9 6v12M15 6v12" size={16} />;
+export const IconPlay = () => <I d="M8 5.5v13l10.5-6.5L8 5.5z" size={16} />;
