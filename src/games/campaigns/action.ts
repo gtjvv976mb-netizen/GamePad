@@ -6,14 +6,25 @@ const salvage = (pods: number[][], rocks: number[][], base: number[] = [120, 270
 const delivery = (stops: number[][], buildings: number[][], traffic: number[][]) => ({ stops, buildings, traffic, hub: [92, 270] });
 const dive = (relics: number[][], air: number[][], walls: number[][], currents: number[][], exit: number[], oxygen = 28) => ({ relics, air, walls, currents, exit, oxygen, start: [75, 105] });
 const arena = (waves: number[][][], walls: number[][]) => ({ waves, walls, start: [480, 270] });
-const rift = (platforms: number[][], spikes: number[][] = []) => ({ platforms: [[0, 500, 960, 40], ...platforms], runes: platforms.map(([x, y, w]) => [x + w / 2, y - 24]), spikes, start: [65, 480], exit: [platforms[platforms.length - 1][0] + platforms[platforms.length - 1][2] - 25, platforms[platforms.length - 1][1] - 25] });
+const RIDGES = [
+ [[110,530,160,22],[320,465,150,22],[525,390,150,22],[720,325,160,22],[940,380,150,22],[1150,305,155,22],[1365,245,160,22],[1580,320,155,22],[1790,390,160,22],[2010,325,155,22],[2220,245,160,22],[2430,310,150,22],[2635,245,250,22]],
+ [[110,520,155,22],[325,440,150,22],[545,355,145,22],[765,285,155,22],[985,365,150,22],[1200,290,150,22],[1410,205,160,22],[1630,280,155,22],[1850,365,160,22],[2070,285,155,22],[2290,205,160,22],[2495,280,150,22],[2690,210,220,22]],
+ [[110,515,150,22],[320,425,145,22],[530,340,150,22],[740,265,155,22],[955,350,150,22],[1175,275,145,22],[1380,195,165,22],[1600,275,150,22],[1810,355,155,22],[2025,275,150,22],[2240,190,155,22],[2445,270,150,22],[2650,200,250,22]],
+ [[110,520,150,22],[315,440,145,22],[515,360,145,22],[720,280,150,22],[930,360,145,22],[1135,280,150,22],[1345,205,150,22],[1550,280,155,22],[1760,355,150,22],[1970,270,150,22],[2180,190,150,22],[2390,265,160,22],[2610,185,285,22]],
+ [[110,515,145,22],[315,425,145,22],[525,335,145,22],[735,250,150,22],[945,335,145,22],[1150,255,150,22],[1360,170,150,22],[1570,250,150,22],[1780,335,150,22],[1990,250,150,22],[2200,165,150,22],[2410,240,160,22],[2630,170,285,22]],
+] as number[][][];
+const rift = (index: number) => {
+ const p=RIDGES[index], route=p.map(([x,y,w])=>[x+w/2,y-18]), checkpoints=[[65,602],route[4],route[8]];
+ const ground=[[0,620,370,100],[680,640,190,80],[1490,660,170,60],[2050,640,175,80],[2820,600,180,120]];
+ return {world:[3000,720],biome:['moonlit','windward','garden','mirrors','crown'][index],platforms:[...ground,...p],route,runes:[route[0],route[2],route[4],route[6],route[8],route[10],route[12]].map(([x,y])=>[x,y-15]),spikes:[[460,680,130,40],[1730,680,155,40],[2320,680,120,40]],start:[65,602],exit:[p[12][0]+p[12][2]-45,p[12][1]-25],checkpoints,secrets:[[p[3][0]+p[3][2]/2,p[3][1]-155],[p[9][0]+p[9][2]/2,p[9][1]-150]],motions:index>0?[[8,0,20,4.8],[12,0,18,5.5]]:[],fragile:index>1?[10,14]:[],patrols:[[p[3][0]+p[3][2]/2,p[3][1]-20,0,40],[p[7][0]+p[7][2]/2,p[7][1]-20,0,35],...(index===4?[[p[12][0]+p[12][2]/2,p[12][1]-25,2,70]]:[])],bossName:index===4?'The Crown Guardian':undefined};
+};
 
 /** Original, fully local chapters. Coordinates are authored level geometry, not remote assets. */
 export const ACTION_CAMPAIGNS: Campaign[] = [
   {
     slug: 'ndp', title: 'Neon Drift Protocol', family: 'action', mechanic: 'Hover racing',
     description: 'Pilot a courier hovercraft through five forbidden circuits to restore the city’s transport grid.',
-    controls: 'Up: thrust · Down: brake/reverse · Left/Right: steer · Action: boost · Alt: handbrake', actionLabel: 'Boost', altLabel: 'Brake', palette: ['#101d35', '#54264b', '#03f5d1'],
+    controls: 'Up: thrust · Down: brake/reverse · Left/Right: steer · Action: boost · Alt: drift / handbrake', actionLabel: 'Boost', altLabel: 'Brake', palette: ['#101d35', '#54264b', '#03f5d1'],
     chapters: [
       chapter('01 · Ignition Alley', 'The transit grid has gone dark. Mechanic Ada lends you her old hovercraft; prove its steering on the abandoned service loop.', 'Pass each numbered gate in order, then cross the finish. Stay on the illuminated road.', 'Ada’s engine works. A hidden broadcast reveals that five relay circuits were cut deliberately.', race([[160, 410], [160, 140], [790, 140], [790, 410]], [])),
       chapter('02 · Switchback District', 'The first relay lies beyond a district of tight switchbacks. Ease off the thrust before each turn.', 'Complete the switchback circuit without destroying the hull.', 'The relay returns local transport to the district. Its logs point toward the canal.', race([[130, 420], [130, 160], [340, 160], [340, 360], [590, 360], [590, 120], [820, 120], [820, 420]], [[465, 360]], 116)),
@@ -25,7 +36,7 @@ export const ACTION_CAMPAIGNS: Campaign[] = [
   {
     slug: 'osv', title: 'Orbital Salvage', family: 'action', mechanic: 'Inertial salvage',
     description: 'Thrust, brake and tow derelict cargo through an asteroid field to rebuild a stranded orbital station.',
-    controls: 'Arrows: directional thrust · Action: tractor pickup/unload · Alt: stabilizing brake', actionLabel: 'Tractor', altLabel: 'Stabilize', palette: ['#11162e', '#3b3c60', '#8bacff'],
+    controls: 'Arrows: directional thrust · Action: tractor pickup/unload · Alt: stabilizing brake · Hold Tractor: repel drones', actionLabel: 'Tractor', altLabel: 'Stabilize', palette: ['#11162e', '#3b3c60', '#8bacff'],
     chapters: [
       chapter('01 · Empty Berth', 'Your station has lost its supply convoy. Retrieve the two drifting power cells; inertia persists until you brake.', 'Tractor each cell, then unload it inside the blue station ring.', 'Emergency lighting flickers on. A distress chart marks the convoy wreck.', salvage([[430, 160], [745, 380]], [[480, 285, 38]])),
       chapter('02 · Wreck Field', 'Convoy cargo is scattered behind dense rock. Carry one crate at a time and stabilize before unloading.', 'Recover three cargo crates without losing your tug.', 'The station receives food and reactor coolant. One crate contains a route to an abandoned repair dock.', salvage([[750, 100], [775, 435], [500, 275]], [[350, 165, 44], [355, 375, 46], [650, 275, 47]])),
@@ -37,7 +48,7 @@ export const ACTION_CAMPAIGNS: Campaign[] = [
   {
     slug: 'slc', title: 'Starline Couriers', family: 'action', mechanic: 'City delivery',
     description: 'Navigate a night city’s traffic and deliver the parcels that reconnect five isolated neighborhoods.',
-    controls: 'Arrows: drive · Action: pick up/deliver · Alt: turbo (uses battery) · Depot restores battery', actionLabel: 'Deliver', altLabel: 'Turbo', palette: ['#1b1732', '#354764', '#ffb65e'],
+    controls: 'Arrows: drive · Action: pick up/deliver · Alt: turbo (uses battery) · Blue markers: business pickups · Depot repairs and charges', actionLabel: 'Deliver', altLabel: 'Turbo', palette: ['#1b1732', '#354764', '#ffb65e'],
     chapters: [
       chapter('01 · The First Letter', 'The last train has gone. Take two letters from the depot to neighbors waiting under amber delivery lights.', 'Pick up at the blue depot, drive to the numbered address and deliver; repeat for every parcel.', 'Two windows light up. The neighbors ask you to carry medicine to the canal district.', delivery([[810, 110], [800, 425]], [[230, 180, 220, 170], [590, 180, 160, 165]], [[500, 80, 0, 150], [515, 460, 0, -155]])),
       chapter('02 · Canal Medicine', 'Traffic still crosses the canal. Watch the red shuttles and stop at the depot between deliveries.', 'Deliver three medicine boxes. Avoid traffic and keep the van’s battery charged.', 'The clinic opens for the night. A musician sends three instrument cases to the market.', delivery([[470, 80], [820, 270], [470, 470]], [[220, 155, 170, 225], [560, 150, 160, 230]], [[470, 270, 140, 0], [825, 70, 0, 145], [120, 430, 165, 0]])),
@@ -49,7 +60,7 @@ export const ACTION_CAMPAIGNS: Campaign[] = [
   {
     slug: 'dpt', title: 'Deep Tide', family: 'action', mechanic: 'Oxygen expedition',
     description: 'Dive through five drowned ruins, follow air pockets and recover the pieces of an ancient tide engine.',
-    controls: 'Arrows: swim · Action: recover relic/use exit · Alt: swim burst (costs oxygen) · Bubbles refill air', actionLabel: 'Recover', altLabel: 'Burst', palette: ['#061b33', '#22585c', '#59f2df'],
+    controls: 'Arrows: swim · Action: recover relic/use exit · Alt: swim burst (costs oxygen) · Bubbles refill air · Action also releases pressure valves', actionLabel: 'Recover', altLabel: 'Burst', palette: ['#061b33', '#22585c', '#59f2df'],
     chapters: [
       chapter('01 · The Sunken Door', 'A tide pulse is flooding the coast. Recover two brass keys from the first chamber; the silver bubbles restore your air.', 'Recover both keys, then use the green exit seal. Surface air and bubble vents refill oxygen.', 'The door opens onto a city buried beneath the current.', dive([[320, 190], [730, 400]], [[450, 120], [700, 280]], [[410, 240, 55, 245]], [[500, 350, 300, 120, -25, 0]], [870, 440])),
       chapter('02 · Whisper Hall', 'Records say the tide engine had three governors. Its first fragments lie below the hall’s broken pillars.', 'Find all three fragments and reach the seal while managing your air.', 'The hall’s inscriptions reveal how the engine was silenced.', dive([[280, 430], [570, 180], [830, 415]], [[240, 265], [620, 280], [820, 160]], [[370, 160, 60, 270], [675, 330, 60, 170]], [[445, 120, 180, 330, 0, 30]], [875, 460], 26)),
@@ -61,7 +72,7 @@ export const ACTION_CAMPAIGNS: Campaign[] = [
   {
     slug: 'gla', title: 'Gridlock Arena', family: 'action', mechanic: 'Arena combat',
     description: 'Fight through five security arenas to free a district from an automated lockdown.',
-    controls: 'Arrows: move · Hold Action: fire at nearest visible enemy · Alt: dash through danger', actionLabel: 'Fire', altLabel: 'Dash', palette: ['#161b24', '#455236', '#b6ff5c'],
+    controls: 'Arrows: move · Hold Action: fire (auto-aim / right stick / mouse) · Alt: dash through danger · Action at open east door: next room', actionLabel: 'Fire', altLabel: 'Dash', palette: ['#161b24', '#455236', '#b6ff5c'],
     chapters: [
       chapter('01 · The Lock', 'The district’s old defense grid has mistaken everyone for intruders. Disable its sentries to reach the control room.', 'Clear both sentry waves. Hold fire and move to avoid the red drones.', 'The first gate opens. Security routes shift deeper into the grid.', arena([[[150, 100, 0], [810, 440, 0]], [[160, 430, 0], [820, 100, 0], [480, 80, 1]]], [])),
       chapter('02 · Crossfire', 'Ranged sentries guard the crossing. Their bolts are visible; use the pillar for cover.', 'Clear three waves, avoiding bolts and contact damage.', 'The crossing is clear. You rescue an engineer who identifies the grid’s armored nodes.', arena([[[120, 100, 1], [840, 440, 0]], [[110, 425, 0], [835, 105, 1], [475, 80, 0]], [[150, 270, 2], [805, 270, 1]]], [[390, 195, 65, 150]])),
@@ -73,13 +84,49 @@ export const ACTION_CAMPAIGNS: Campaign[] = [
   {
     slug: 'rrn', title: 'Rift Runners', family: 'action', mechanic: 'Platform adventure',
     description: 'Leap through five fractured towers and reunite the runes that hold a floating island together.',
-    controls: 'Left/Right: run · Action or Up: jump (two jumps before landing) · Alt: air dash · Collect every rune, reach portal', actionLabel: 'Jump', altLabel: 'Dash', palette: ['#16132b', '#42385d', '#a3a4ff'],
+    controls: 'Left/Right: run · Action or Up: jump (two jumps before landing) · Alt: air dash · Stomp enemies / dash attack · Checkpoints save your route · Collect runes and reach the portal', actionLabel: 'Jump', altLabel: 'Dash', palette: ['#16132b', '#42385d', '#a3a4ff'],
     chapters: [
-      chapter('01 · Broken Steps', 'The island’s anchor rune has shattered. Follow its fragments up the old watchtower, using a second jump in the air when needed.', 'Collect all five runes and reach the portal at the top.', 'The first anchor lights. A bridge of starlight leads to the eastern tower.', rift([[120, 425, 145, 18], [315, 350, 140, 18], [510, 275, 140, 18], [700, 200, 130, 18], [825, 125, 120, 18]])),
-      chapter('02 · Windward Tower', 'The eastern tower has lost whole stretches of stair. Air dashes can bridge the longest gaps.', 'Gather five wind runes, then step through the eastern portal.', 'The winds settle into a steady current. The next anchor waits above the gardens.', rift([[135, 420, 125, 18], [335, 335, 125, 18], [520, 250, 120, 18], [695, 170, 120, 18], [830, 95, 110, 18]], [[280, 480, 90, 20], [560, 480, 105, 20]])),
-      chapter('03 · Fractured Garden', 'The garden’s floating beds have become isolated ledges. Thorn patches mark unsafe ground below.', 'Recover the five garden runes and reach the high portal.', 'The garden’s roots knit themselves across the cracks, and flowers open in the void.', rift([[120, 405, 120, 18], [295, 315, 125, 18], [475, 225, 120, 18], [665, 155, 135, 18], [835, 85, 100, 18]], [[245, 480, 165, 20], [600, 480, 180, 20]])),
-      chapter('04 · Mirror Spire', 'The mirror spire rises in a staggered spiral. Double jumps let you correct a missed landing.', 'Gather all six mirror runes and reach the spire portal.', 'The mirror anchor reflects the island whole for a moment. Only the crown remains broken.', rift([[100, 430, 120, 18], [255, 355, 115, 18], [405, 280, 115, 18], [555, 205, 115, 18], [710, 130, 115, 18], [845, 65, 100, 18]], [[240, 480, 90, 20], [535, 480, 145, 20]])),
-      chapter('05 · Crown of the Rift', 'The final fragments hover above a field of thorns. Bring every anchor rune to the crown portal.', 'Recover six crown runes and activate the final portal.', 'The final rune meets its socket. The five towers pull together, holding the island in the sky.', rift([[110, 420, 110, 18], [265, 335, 105, 18], [420, 250, 110, 18], [575, 165, 110, 18], [730, 100, 105, 18], [850, 45, 100, 18]], [[245, 480, 170, 20], [475, 480, 225, 20], [750, 480, 125, 20]])),
+      chapter('01 · Broken Steps', 'The island’s anchor rune has shattered. Follow its fragments up the old watchtower, using a second jump in the air when needed.', 'Collect all seven runes and reach the portal at the top.', 'The first anchor lights. A bridge of starlight leads to the eastern tower.', rift(0)),
+      chapter('02 · Windward Tower', 'The eastern tower has lost whole stretches of stair. Air dashes can bridge the longest gaps.', 'Gather seven wind runes, then step through the eastern portal.', 'The winds settle into a steady current. The next anchor waits above the gardens.', rift(1)),
+      chapter('03 · Fractured Garden', 'The garden’s floating beds have become isolated ledges. Thorn patches mark unsafe ground below.', 'Recover the seven garden runes and reach the high portal.', 'The garden’s roots knit themselves across the cracks, and flowers open in the void.', rift(2)),
+      chapter('04 · Mirror Spire', 'The mirror spire rises in a staggered spiral. Double jumps let you correct a missed landing.', 'Gather all seven mirror runes and reach the spire portal.', 'The mirror anchor reflects the island whole for a moment. Only the crown remains broken.', rift(3)),
+      chapter('05 · Crown of the Rift', 'The final fragments hover above a field of thorns. Bring every anchor rune to the crown portal.', 'Recover seven crown runes and defeat the guardian and activate the final portal.', 'The final rune meets its socket. The five towers pull together, holding the island in the sky.', rift(4)),
     ], ending: 'The island’s roads reconnect. People cross the new bridges carrying lanterns, and the crown portal becomes a lookout over a world that no longer falls apart.',
   },
 ];
+
+// Worlds are deliberately larger than the viewport; camera movement reveals authored routes and hazards.
+for(const game of ACTION_CAMPAIGNS) game.chapters.forEach((chapter,index)=>{
+ const c=chapter.config;
+ if(game.slug==='rrn')return;
+ if(game.slug==='gla'){
+  const waves=c.waves as number[][][];
+  waves.forEach((wave,n)=>{if(index>0&&n%2===0)wave.push([830,270,3]);if(index>1&&n===1)wave.push([140,100,4]);if(index>2&&n===2)wave.push([800,440,5]);});
+  waves.push([[480,120,6],...(index>1?[[130,430,1],[830,430,0]]:[])]);
+  c.biome=['loading-dock','crossroads','reactor','plaza','command'][index];c.bossName=['Gate Sentinel','Crossing Warden','Iron Tribunal','Plaza Siege Engine','Gridlock Prime'][index];
+  chapter.objective='Clear each security room, use its east door, and defeat the sector boss. Collect dropped shield cells and dash through bolts.';return;
+ }
+ const scale=game.slug==='slc'?2:game.slug==='dpt'?1.65:1.8;
+ c.world=[960*scale,540*scale];
+ for(const key of ['points','mines','pods','stops','relics','air']) if(c[key])c[key]=(c[key] as number[][]).map(p=>p.map(v=>v*scale));
+ for(const key of ['base','hub','start','exit'])if(c[key])c[key]=(c[key] as number[]).map(v=>v*scale);
+ for(const key of ['buildings','walls'])if(c[key])c[key]=(c[key] as number[][]).map(r=>r.map(v=>v*scale));
+ if(c.rocks)c.rocks=(c.rocks as number[][]).map(([x,y,r])=>[x*scale,y*scale,r*1.4]);
+ if(c.traffic)c.traffic=(c.traffic as number[][]).map(([x,y,vx,vy])=>[x*scale,y*scale,vx,vy]);
+ if(c.currents)c.currents=(c.currents as number[][]).map(([x,y,w,h,dx,dy])=>[x*scale,y*scale,w*scale,h*scale,dx,dy]);
+ if(game.slug==='ndp'){
+  c.width=Number(c.width)*1.45;c.laps=index===0?1:index===4?3:2;c.rivals=index===0?1:3;c.rivalSpeed=105+index*5;c.par=[50,130,115,145,190][index];c.biome=['rain-district','industrial','canal','rooftops','central'][index];
+  chapter.objective=`Finish ${c.laps} lap${c.laps===1?'':'s'} through every checkpoint. Race the rivals, earn boost by drifting, and protect your hull.`;
+ }else if(game.slug==='osv'){
+  c.biome=['home-berth','graveyard','dockyard','satellite','rescue'][index];c.patrols=index===0?[]:[[1120,480,0,130],...(index>1?[[1450,750,1,95]]:[])];
+  if(index>1){c.valves=[[510,100],[1150,850]];c.doors=[[660,80,35,160],[1210,750,35,170]];}
+  chapter.objective='Recover the cargo, release marked wreck airlocks, and tow each crate safely into the station berth. Hold Tractor near hostile drones to repel them.';
+ }else if(game.slug==='slc'){
+  const stops=c.stops as number[][];c.pickups=stops.map((_,n)=>n===0?c.hub:n%2?[940,150]:[170,930]);c.jobTypes=stops.map((_,n)=>['standard','fragile','urgent'][(n+index)%3]);c.biome=['letters','canal','market','hilltop','festival'][index];c.signals=[[940,540],[1670,160],[200,900]];
+  chapter.objective='Load each job at its blue business marker, deliver to its amber address, and protect fragile parcels. Traffic stops at red signals; the depot repairs and charges your van.';
+ }else if(game.slug==='dpt'){
+  c.biome=['harbor','whisper-hall','current-caves','lantern-vault','engine-heart'][index];c.oxygen=Number(c.oxygen)+14;c.patrols=[[740,560,0,85],...(index>0?[[1180,330,1,150]]:[]),...(index===4?[[1330,695,2,100]]:[])];
+  c.valves=[(c.air as number[][])[0],...(index>1?[(c.air as number[][])[1]]:[])];c.doors=[[850,440,35,170],...(index>1?[[1225,100,35,190]]:[])];
+  chapter.objective='Release the pressure valves, recover every relic, and use the exit seal. Refill oxygen at bubble vents, watch wildlife patrols, and burst through strong currents.';
+ }
+});

@@ -45,3 +45,26 @@ The existing Store/Library integration case was then run against **https://gamed
 An independent HTTP audit fetched the live manifest and all 16 game HTML endpoints successfully. Each was SHA-256-identical to the tested file under `dist/games/`; all game HTML contains inline code/styles and a network-blocking CSP. The published frontend bundle was also checked for the trial, full-play and download controls.
 
 Frontend publication did not configure the store program, change deployment variables or perform on-chain transactions. Purchases remain Preview mode.
+
+## Quality rebuild — 12 October 2026
+
+All 16 original games were rebuilt after the user requested higher quality games informed by the Steam research. The catalog keeps its 90 chapters, SOL terms and chain IDs. Campaigns now include larger scrolling worlds, original illustrated sprites, animated environments, locally synthesized music, persistent equipment, distinct enemy and boss behaviors, authored machinery and multi-room optical puzzles. The design and compact browser-game scope are documented in `src/games/DESIGN.md`; image-generation prompts and provenance are in `src/games/assets/PROMPTS.md`.
+
+| Check | Result |
+| --- | --- |
+| Production TypeScript/Vite build and offline generation | Pass; 16 self-contained HTML files, 90 chapters |
+| Action models | 26 cases pass; all 30 chapters through controls |
+| Adventure models | 13 cases pass; all 24 chapters through controls |
+| Strategy models | 78 cases pass; all 36 chapters and 18 nested optical rooms through controls |
+| Full local app/game suite | All 238 checks reported passing, 102 intentional skips; local runner stalled during worker shutdown |
+| Final offline/runtime checks after toolbar correction | 58 pass, 51.0 seconds; clean exit |
+| Independent runtime/integration review | One keyboard-toolbar interception fixed; no other material finding |
+| Git whitespace and ignored-key checks | Pass |
+
+The full run includes every downloaded title opened with networking disabled and its embedded art loaded; save/resume, migration preserving old unlocks, invalid import rejection, controller and touch input, modal freeze, tactical focus, music gesture/mute/pause, a complete campaign ending, Store trials, Library full campaigns and downloads. The final runtime run repeats these checks after allowing native Enter/Space activation on focused toolbar controls and exits successfully. The local configuration used installed Google Chrome because the package-matched cached Chromium was absent. All full-suite assertions completed, but that runner did not exit cleanly during worker teardown; the final offline/runtime run exited cleanly, and GitHub CI must provide the complete clean-exit release check. Earlier interrupted local runs are not reported as complete passes. Logs remain ignored under `verification/quality-*.log`; temporary local configurations are excluded from Git.
+
+The 102 skips are 90 duplicate Node model checks on the phone project (12 adventure and 78 strategy) and 12 existing duplicate Node/live or phone-only exclusions. One adventure fractional-HP regression executes on both projects, and action models also execute on both. Local integration screenshots: [desktop](quality-integrated-desktop.png) and [phone](quality-integrated-phone.png).
+
+Rebuilt save schemas validate simulation state and title-specific equipment before replacing the current game. Old prototype saves preserve unlocks and start their changed chapter fresh. Repeated first-clear rewards cannot be farmed through replay or restored saves. Reviews also corrected legitimate failed-state restores, permissive tavern service quotas, functional optical upgrades, bounded card-event rewards, fractional enemy HP validation, boat/vehicle sprite orientation and decision/focus transitions.
+
+No on-chain code, program configuration, repository deployment variable, funding or transaction changed. Recovery remains partial. Frontend publication will be recorded separately after CI and live verification.

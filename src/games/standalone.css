@@ -337,3 +337,72 @@ h1 {
 #selection { font-size: 14px; line-height: 1.5; padding: 9px 12px; margin: 6px 0; border-left: 3px solid var(--accent); background: #0005; border-radius: 4px; }
 #selection[hidden] { display: none; }
 @media (max-width: 650px) { #selection { font-size: 12px; padding: 6px 8px; } }
+
+/* The world takes priority; decisions remain real, focusable controls. */
+#game { max-width: 1280px; padding: 12px 20px; }
+header { padding-bottom: 10px; }
+header h1 { font-size: clamp(20px, 2.5vw, 26px); }
+.toolbar button { min-height: 36px; padding: 7px 11px; font-size: 12px; }
+.dashboard { padding: 10px 0; }
+.dashboard p { max-width: 650px; }
+.dashboard h2 { font-size: 16px; }
+.dashboard p { font-size: 13px; }
+#stats b { font-size: 16px; }
+.abilities button { max-width: 240px; font-size: 12px; padding: 8px 12px; }
+#message { margin: 9px 0; font-size: 13px; }
+#selection { margin: 8px 0; border-radius: 6px; }
+#decisions { margin: 8px 0; padding: 12px; background: #141927f5; border: 1px solid #ffffff35; border-radius: 12px; }
+#decisions h3 { font-size: 15px; margin: 0 0 9px; color: var(--accent); }
+#panel-help { font-size: 11px; color: #c3c9d2; line-height: 1.4; margin: 0 0 8px; }
+#game-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: 7px; max-height: 140px; overflow: auto; padding: 3px; }
+#game-actions button { display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 5px; font-size: 13px; padding: 10px 12px; }
+#game-actions small { color: #c3c9d2; font-size: 11px; font-weight: normal; line-height: 1.4; }
+#decisions.modal { position: fixed; z-index: 10; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(780px, calc(100% - 28px)); max-height: 80dvh; overflow: auto; padding: 22px; border-color: var(--accent); box-shadow: 0 0 0 100vmax #060910a8, 0 20px 80px #000c; }
+#decisions.modal h3 { font-size: 24px; }
+#decisions.modal #game-actions { max-height: 58dvh; grid-template-columns: repeat(auto-fit, minmax(185px, 1fr)); }
+#decisions.modal button { min-height: 86px; font-size: 16px; }
+#boss { position: absolute; top: 16px; left: 25%; width: 50%; pointer-events: none; padding: 9px 13px; background: #130f19d9; border-radius: 8px; text-align: center; font-size: 12px; color: #fff0d9; }
+#boss div { height: 7px; background: #3b2033; margin-top: 6px; border-radius: 4px; overflow: hidden; }
+#boss i { display: block; height: 100%; background: linear-gradient(90deg, #ad4258, #f9b0a0); transition: width .15s; }
+.volume { display: flex; align-items: center; gap: 14px; font-size: 13px; margin: 14px 0; }
+.volume input { accent-color: var(--accent); }
+:fullscreen #game { max-width: none; }
+@media(min-width: 1000px) {
+  #game[data-side-panel="true"] main { display: grid; grid-template-columns: minmax(0, 1fr) 280px; column-gap: 14px; }
+  #game[data-side-panel="true"] main > * { grid-column: 1 / -1; }
+  #game[data-side-panel="true"] .stage { grid-column: 1; grid-row: 2; align-self: start; }
+  #game[data-side-panel="true"] #decisions { grid-column: 2; grid-row: 2; align-self: start; margin: 0; max-height: var(--board-height); }
+  #game[data-side-panel="true"] #game-actions { grid-template-columns: 1fr; max-height: calc(var(--board-height) - 102px); }
+}
+@media(max-width: 600px) {
+  #game { padding: 10px 12px; }
+  header { align-items: flex-start; flex-wrap: wrap; gap: 9px; }
+  header h1 { font-size: 23px; }
+  .toolbar { justify-content: flex-start; gap: 5px; width: 100%; }
+  .toolbar button { padding: 6px 8px; min-height: 32px; font-size: 11px; }
+  .dashboard { padding: 9px 0; gap: 7px; }
+  #stats div { padding: 5px 9px; }
+  #stats b { font-size: 16px; }
+  #decisions.modal { padding: 16px; }
+  #decisions.modal h3 { font-size: 20px; }
+  #decisions.modal #game-actions { grid-template-columns: 1fr 1fr; }
+  #decisions.modal button { font-size: 13px; min-height: 78px; }
+  #game-actions { grid-template-columns: 1fr 1fr; }
+  #boss { left: 18%; width: 64%; top: 8px; padding: 5px 8px; font-size: 10px; }
+}
+@media(max-height: 520px) and (orientation: landscape) {
+  #game { padding: 5px 12px; }
+  header { padding: 3px 0; }
+  .brand { display: none; }
+  h1 { font-size: 17px; margin: 0; }
+  .dashboard { padding: 4px 0; }
+  .dashboard h2 { font-size: 13px; }
+  .dashboard p, #chapter-number { font-size: 10px; margin: 2px 0; }
+  #stats div { padding: 2px 7px; }
+  #stats b { font-size: 13px; }
+  #message { margin: 3px 0; font-size: 10px; }
+  #selection { padding: 5px 8px; margin: 3px 0; font-size: 10px; }
+  .controls { margin: 4px 0; }
+  .controls button { min-height: 32px; padding: 3px 9px; font-size: 11px; }
+  details, footer { font-size: 10px; margin-top: 6px; }
+}

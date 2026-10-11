@@ -8,32 +8,32 @@ You can drive it with a real game controller (Gamepad API): d-pad or stick to mo
 
 ## Play the offline campaigns
 
-All 16 catalog titles are original, compact single-player games with authored campaigns, playable objectives, failure/retry and story endings. There are 90 chapters in total. Each game has its own mechanics and original canvas graphics; no external art, API or game service is required during play.
+All 16 catalog titles are original single-player browser games with authored campaigns, playable objectives, failure/retry and story endings. There are 90 chapters in total. The quality rebuild adds continuous worlds, stronger movement/combat, multi-stage strategy systems and permanent equipment. Original illustrated sprites, layered environments, music and effects are included in each download; no external asset, API or game service is required during play. See [game design and Steam research](src/games/DESIGN.md) and [art provenance](src/games/assets/PROMPTS.md).
 
 Try the first chapter from Store without a wallet. Purchased games in Library have **Play campaign** and **Download offline**. Open a downloaded `.html` in a modern browser to play its complete campaign without a server, wallet or internet connection. The store's SOL prices and licenses cover its purchase/resale flow; downloaded games run independently.
 
-Use arrows/WASD, Space/Enter for the primary action, X/Shift for the secondary action, and P/Escape to pause. Standard controllers use the stick/D-pad, A/X and Start. Touch controls are on screen; adventures and board games also accept board taps. Each game's briefing explains its mechanics. Browser focus loss pauses gameplay.
+Use arrows/WASD, Space/Enter for the primary action, X/Shift for the secondary action, and P/Escape to pause. Standard controllers use the stick/D-pad, A/X and Start, with right-stick aiming in combat. Select focuses a decision panel; confirm chooses an option and B returns to the board. Touch controls and decision buttons are on screen. Each game's briefing explains its mechanics. Sound, volume, Hints and Full screen controls are available; browser focus loss pauses gameplay.
 
-Progress saves automatically when browser storage is available. **Controls and save files** offers JSON export/import for backups or moving between devices. Local-file browser storage can vary, so export before moving your game or clearing browser data.
+Progress and earned equipment save automatically when browser storage is available. **Controls and save files** offers validated JSON export/import for backups or moving between devices. Older prototype saves retain campaign unlocks and restart the changed chapter under its new rules. Local-file browser storage can vary, so export before moving your game or clearing browser data.
 
 | Game | Chapters | Gameplay |
 | --- | ---: | --- |
-| Neon Drift Protocol | 5 | Steer, thrust, brake and boost through checkpoint circuits |
-| Hollow Crown | 6 | Explore, collect seals, fight sentinels and brace against attacks |
-| Orbital Salvage | 5 | Inertial tug piloting, tractor cargo and dock deliveries |
-| Pixel Tavern | 6 | Mix ordered recipes, manage stock and serve guest tickets |
-| Shardfall Tactics | 6 | Two-unit grid battles, action points, cover and enemy turns |
-| Kaiju Kitchen | 6 | Match monster cravings, chain meals and manage stove heat |
-| Echoes of Vael | 6 | Recover archive folios and decode rune sequences |
-| Gridlock Arena | 5 | Move, fire, dash and survive escalating sentry waves |
-| Moss & Marrow | 6 | Deck battles, damage, guard, growth and reward drafting |
-| Starline Couriers | 5 | Parcel routes, traffic avoidance and battery management |
-| Deep Tide | 5 | Recover relics, navigate currents and ration diving oxygen |
-| Chrono Bazaar | 6 | Buy aging goods and time sales against market deadlines |
-| Rift Runners | 5 | Double-jump, air dash, collect runes and avoid thorns |
-| Ironbloom | 6 | Gather wood/ore, grow flowers and craft garden repairs |
-| Lumen Cascade | 6 | Rotate mirrors and route colored light to receivers |
-| Saltwind Sagas | 6 | Sail tide passages, salvage supplies, light beacons and repair |
+| Neon Drift Protocol | 5 | Drift/boost, AI rivals, multi-lap races, medals and car modules |
+| Hollow Crown | 6 | Scrolling keeps, telegraphed combat, dodges, keeper requests, boss and gear |
+| Orbital Salvage | 5 | Physical tethered cargo, mass, drones, airlocks, fuel and tug modules |
+| Pixel Tavern | 6 | Worker travel, two stoves, batches, freshness, arriving guests and service chains |
+| Shardfall Tactics | 6 | Three specialists, enemy intentions, shove/terrain and rescue/defense/escort |
+| Kaiju Kitchen | 6 | Knife cuts, timed grilling/flips, seasoning, craving chains and stomps |
+| Echoes of Vael | 6 | Scrolling archives, folios, dialogue, memory puzzles and restored machinery |
+| Gridlock Arena | 5 | Combat rooms, weapon drops, varied enemies, aiming and sector bosses |
+| Moss & Marrow | 6 | 24 spells, branching expeditions, traders/camps, relics and persistent decks |
+| Starline Couriers | 5 | Van driving, traffic signals, pickups, fragile deliveries and battery |
+| Deep Tide | 5 | Multi-room diving, valves, doors, wildlife, currents and air |
+| Chrono Bazaar | 6 | Three-town caravan, demand, aging/spoilage, contracts and travel |
+| Rift Runners | 5 | Scrolling platforms, responsive jumps, dashes, checkpoints, secrets and boss |
+| Ironbloom | 6 | Gathering, renewable crops, keeper requests and visible industrial repairs |
+| Lumen Cascade | 6 | Three rooms per temple, mirrors/splitters, movable crystals and shutters |
+| Saltwind Sagas | 6 | Wind/inertial sailing, raider combat, beacons, repairs and ship upgrades |
 
 `npm run build:games` produces `public/games/*.html` and a size/chapter manifest. `npm run dev` and `npm run build` generate those files automatically; production copies are in `dist/games/`. Campaign content is in `src/games/campaigns/`, engines in `src/games/engines/`, and shared input, save and story UI in `src/games/standalone.ts`. Generated game files are ignored by Git and rebuilt from source.
 

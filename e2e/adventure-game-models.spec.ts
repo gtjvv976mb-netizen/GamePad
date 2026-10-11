@@ -2,231 +2,155 @@ import { expect, test } from "@playwright/test";
 import { ADVENTURE_CAMPAIGNS } from "../src/games/campaigns/adventure";
 import { createAdventureEngine } from "../src/games/engines/adventure";
 import type { Campaign, GameButton, GameEngine } from "../src/games/types";
-
-test.skip(({ isMobile }) => isMobile, "pure model coverage runs once in Node");
-
-type Snapshot = {
-  x: number; y: number; turn: number; health: number; reserve: number; guard: number;
-  picked: number[]; planted: { id: number; turn: number }[]; harvested: number[];
-  enemies: { id: number; hp: number }[]; crafted: boolean; runeProgress: number; beacons: number[];
-};
-const snapshot = (engine: GameEngine) => engine.save() as unknown as Snapshot;
-const press = (engine: GameEngine, button: GameButton) => engine.update(0.17, { held: new Set([button]), pressed: new Set([button]) });
-const directions: [GameButton, number, number][] = [["up", 0, -1], ["down", 0, 1], ["left", -1, 0], ["right", 1, 0]];
-
-// This solver reads the authored room and observations. It never changes a save or injects a victory.
-function explorer(campaign: Campaign, chapter: number, engine: GameEngine) {
-  const config = campaign.chapters[chapter].config;
-  const map = (config.map as string[]).join("");
-  const ids = (char: string) => Array.from(map, (tile, id) => tile === char ? id : -1).filter(id => id >= 0);
-  const position = () => snapshot(engine).y * 16 + snapshot(engine).x;
-  const path = (destination: number) => {
-    const s = snapshot(engine), start = position();
-    const locked = campaign.slug === "hcr" ? ids("K").some(id => !s.picked.includes(id))
-      : campaign.slug === "eov" ? s.runeProgress < (config.sequence as number[]).length : campaign.slug === "ibl" ? !s.crafted : false;
-    const queue = [start], previous = new Map<number, { id: number; button: GameButton }>();
-    previous.set(start, { id: start, button: "alt" });
-    for (let cursor = 0; cursor < queue.length && !previous.has(destination); cursor++) {
-      const id = queue[cursor];
-      for (const [button, dx, dy] of directions) {
-        const x = id % 16 + dx, y = Math.floor(id / 16) + dy, next = y * 16 + x;
-        if (x < 0 || y < 0 || x >= 16 || y >= 9 || map[next] === "#" || (map[next] === "D" && locked) || s.enemies.some(enemy => enemy.id === next && enemy.hp > 0) || previous.has(next)) continue;
-        previous.set(next, { id, button }); queue.push(next);
-      }
+test.skip(({ isMobile }) => isMobile, "pure world simulations run once in Node");
+type World = { player: { x: number; y: number; vx: number; vy: number; hp: number; stamina: number }; time: number; picked: number[]; planted: { id: number; birth: number }[]; wood: number; ore: number; blooms: number; beacons: number[]; enemies: { id: number; x: number; y: number; hp: number; max: number; phase: number }[]; crafted: boolean; panel: string; memory: number; puzzle: number[]; status: string; progress: { coins: number; rewards: string[]; blade: number; heart: number; tool: number; mast: number } };
+const state = (engine: GameEngine) => engine.save().data as World;
+const press = (engine: GameEngine, button: GameButton) => engine.update(1 / 60, { held: new Set([button]), pressed: new Set([button]) });
+const tick = (engine: GameEngine, held: GameButton[] = []) => { if (state(engine).panel) engine.choose!("close"); engine.update(1 / 60, { held: new Set(held), pressed: new Set() }); };
+const center = (id: number) => ({ x: (id % 16 + .5) * 92, y: (Math.floor(id / 16) + .5) * 92 });
+function explorer(game: Campaign, chapter: number, engine: GameEngine) {
+  const config = game.chapters[chapter].config, map = (config.map as string[]).join("");
+  const ids = (chars: string) => [...map].map((tile, id) => chars.includes(tile) ? id : -1).filter(id => id >= 0);
+  const posId = () => Math.floor(state(engine).player.y / 92) * 16 + Math.floor(state(engine).player.x / 92);
+  const path = (goal: number) => {
+    const start = posId(), queue = [start], prior = new Map<number, number>([[start, start]]);
+    for (let i = 0; i < queue.length && !prior.has(goal); i++) for (const d of [1, -1, 16, -16]) {
+      const next = queue[i] + d;
+      if (next < 0 || next >= 144 || map[next] === "#" || map[next] === "D" || prior.has(next)) continue;
+      prior.set(next, queue[i]); queue.push(next);
     }
-    if (!previous.has(destination)) return undefined;
-    const result: { button: GameButton; id: number }[] = [];
-    let id = destination;
-    while (id !== start) { const step = previous.get(id)!; result.unshift({ button: step.button, id }); id = step.id; }
-    return result;
+    expect(prior.has(goal), `${game.slug} chapter${chapter + 1}: route to ${goal}`).toBe(true);
+    const route: number[] = []; let next = goal; while (next !== start) { route.unshift(next); next = prior.get(next)!; }
+    return [...route, goal];
   };
-  const visit = (id: number, heal = true) => {
-    const route = path(id);
-    expect(route, `${campaign.slug} chapter ${chapter + 1}: reachable ${id}`).toBeDefined();
-    for (const step of route!) {
-      let s = snapshot(engine);
-      if (heal && ((campaign.slug === "ibl" && s.reserve < 42) || (campaign.slug === "hcr" && s.health <= 7))) {
-        const remedy = ids("H").find(item => !s.picked.includes(item) && path(item));
-        if (remedy !== undefined) { visit(remedy, false); press(engine, "action"); visit(id, false); return; }
+  const visit = (id: number, fire = true) => {
+    for (const waypoint of path(id)) {
+      const target = center(waypoint);
+      for (let i = 0; i < 1500; i++) {
+        const p = state(engine).player, dx = target.x - p.x, dy = target.y - p.y;
+        if (Math.hypot(dx, dy) < 13 && (game.slug !== "sws" || Math.hypot(p.vx, p.vy) < 40)) break;
+        const held: GameButton[] = fire ? ["action"] : [];
+        const px = game.slug === "sws" ? dx * 4 - p.vx : dx, py = game.slug === "sws" ? dy * 4 - p.vy : dy;
+        if (px > 5) held.push("right"); if (px < -5) held.push("left"); if (py > 5) held.push("down"); if (py < -5) held.push("up");
+        tick(engine, held);
+        expect(engine.view().status, `${game.slug} navigation`).not.toBe("lost");
       }
-      s = snapshot(engine);
-      if (campaign.slug === "hcr" && s.guard === 0 && s.reserve > 0 && s.enemies.some(enemy => enemy.hp > 0 && Math.abs(enemy.id % 16 - step.id % 16) + Math.abs(Math.floor(enemy.id / 16) - Math.floor(step.id / 16)) === 1)) press(engine, "alt");
-      if (campaign.slug === "sws" && map[step.id] === "R") {
-        for (let waits = 0; Math.floor(snapshot(engine).turn / 3) % 2 === 0 && waits < 3; waits++) press(engine, "alt");
-      }
-      press(engine, step.button);
-      expect(engine.view().status, `${campaign.slug}: survived navigation`).not.toBe("lost");
-      expect(position()).toBe(step.id);
+      if (engine.view().status === "won") return;
+      expect(Math.hypot(state(engine).player.x - target.x, state(engine).player.y - target.y), `${game.slug} arrived ${waypoint}`).toBeLessThan(30);
     }
   };
-  const gather = (char: string, limit = ids(char).length) => {
-    for (let count = 0; count < limit; count++) {
-      const choices = ids(char).filter(id => !snapshot(engine).picked.includes(id)).map(id => ({ id, length: path(id)?.length ?? Infinity })).sort((a, b) => a.length - b.length);
-      expect(choices.length).toBeGreaterThan(0);
-      visit(choices[0].id); press(engine, "action");
-      expect(snapshot(engine).picked).toContain(choices[0].id);
-    }
-  };
-  return { map, ids, path, visit, gather, position };
+  const work = (frames = 80) => { for (let i = 0; i < frames && engine.view().status === "playing"; i++) tick(engine, ["action"]); };
+  const gather = (char: string) => { for (const id of ids(char)) if (!state(engine).picked.includes(id)) { visit(id); work(); expect(state(engine).picked).toContain(id); } };
+  return { ids, visit, work, gather };
 }
-
-for (const campaign of ADVENTURE_CAMPAIGNS) {
-  for (let chapter = 0; chapter < campaign.chapters.length; chapter++) {
-    test(`${campaign.title}: play all objectives in chapter ${chapter + 1}`, () => {
-      const engine = createAdventureEngine({ campaign, chapterIndex: chapter });
-      const world = explorer(campaign, chapter, engine);
-      const config = campaign.chapters[chapter].config;
-      if (campaign.slug === "hcr") {
-        world.gather("K");
-        for (const target of snapshot(engine).enemies) {
-          const adjacent = directions.map(([, dx, dy]) => target.id + dy * 16 + dx)
-            .filter(id => world.map[id] !== "#" && world.path(id))
-            .sort((a, b) => world.path(a)!.length - world.path(b)!.length)[0];
-          expect(adjacent).toBeDefined(); world.visit(adjacent);
-          for (let strikes = 0; snapshot(engine).enemies.find(enemy => enemy.id === target.id)!.hp > 0 && strikes < 10; strikes++) {
-            const s = snapshot(engine);
-            if (s.guard === 0 && s.reserve > 0 && s.enemies.find(enemy => enemy.id === target.id)!.hp > 2) press(engine, "alt");
-            press(engine, "action");
-            expect(engine.view().status).not.toBe("lost");
-          }
-          expect(snapshot(engine).enemies.find(enemy => enemy.id === target.id)!.hp).toBe(0);
+for (const game of ADVENTURE_CAMPAIGNS) test(`${game.title}: all six worlds completed through actual controls with persistent equipment`, () => {
+  let progression: Record<string, unknown> | undefined;
+  for (let chapter = 0; chapter < game.chapters.length; chapter++) {
+    const engine = createAdventureEngine({ campaign: game, chapterIndex: chapter, progression });
+    const world = explorer(game, chapter, engine), config = game.chapters[chapter].config;
+    if (game.slug === "hcr") {
+      world.gather("K");
+      for (let target = 0; target < state(engine).enemies.length; target++) {
+        for (let attempts = 0; state(engine).enemies[target].hp > 0 && attempts < 20; attempts++) {
+          const enemy = state(engine).enemies[target];
+          const id = Math.floor(enemy.y / 92) * 16 + Math.floor(enemy.x / 92);
+          world.visit(id); world.work(150);
+          if (state(engine).player.hp < 55) { const heal = world.ids("H").find(id => !state(engine).picked.includes(id)); if (heal !== undefined) { world.visit(heal); world.work(); } }
         }
-      } else if (campaign.slug === "eov") {
-        world.gather("F"); press(engine, "alt");
-        expect(engine.view().message).toContain("Memory:");
-        for (const rune of config.sequence as number[]) { world.visit(world.ids(String(rune))[0]); press(engine, "action"); }
-        expect(snapshot(engine).runeProgress).toBe((config.sequence as number[]).length);
-      } else if (campaign.slug === "ibl") {
-        world.gather("W", Number(config.wood) + Number(config.bloom)); world.gather("O", Number(config.ore));
-        const beds = world.ids("P").slice(0, Number(config.bloom));
-        for (const id of beds) { world.visit(id); press(engine, "action"); }
-        for (const id of beds) {
-          world.visit(id);
-          const planted = snapshot(engine).planted.find(bed => bed.id === id)!;
-          while (snapshot(engine).turn - planted.turn < 3) press(engine, "alt");
-          press(engine, "action"); expect(snapshot(engine).harvested).toContain(id);
-        }
-        press(engine, "alt"); expect(snapshot(engine).crafted).toBe(true);
-      } else {
-        world.gather("G");
-        for (const id of world.ids("B")) { world.visit(id); press(engine, "action"); }
-        expect(snapshot(engine).beacons.length).toBe(world.ids("B").length);
+        expect(state(engine).enemies[target].hp).toBe(0);
       }
-      expect(engine.view().status).toBe("playing");
-      const saved = JSON.parse(JSON.stringify(engine.save()));
-      const resumed = createAdventureEngine({ campaign, chapterIndex: chapter, restored: saved });
-      expect(resumed.save()).toEqual(saved);
-      const resumedWorld = explorer(campaign, chapter, resumed);
-      resumedWorld.visit(resumedWorld.ids("E")[0]);
-      expect(resumed.view().status).toBe("won");
-      expect(resumed.view().message).toBe(campaign.chapters[chapter].after);
-      const victory = resumed.save(); press(resumed, "alt"); press(resumed, "action");
-      expect(resumed.save()).toEqual(victory);
-      expect(createAdventureEngine({ campaign, chapterIndex: chapter, restored: victory }).view().status).toBe("won");
-    });
-  }
-}
-
-for (const campaign of ADVENTURE_CAMPAIGNS) {
-  test(`${campaign.title}: exact mid-room saves, blocked walls and malformed save rejection`, () => {
-    const engine = createAdventureEngine({ campaign, chapterIndex: 0 });
-    const before = snapshot(engine); press(engine, "left");
-    expect(snapshot(engine)).toMatchObject({ x: before.x, y: before.y, turn: before.turn });
-    press(engine, "right"); press(engine, "down"); press(engine, "alt");
-    engine.update(0.03, { held: new Set(), pressed: new Set() });
-    const saved = engine.save();
-    const restored = createAdventureEngine({ campaign, chapterIndex: 0, restored: saved });
+    } else if (game.slug === "eov") {
+      world.gather("F"); world.visit(world.ids("1")[0], false);
+      engine.choose!("close"); for (let i = 0; i < 30; i++) tick(engine); press(engine, "action");
+      expect(state(engine).panel).toBe("puzzle");
+      if (![1, 2].includes(chapter)) for (const rune of config.sequence as number[]) engine.choose!(`rune:${rune}`);
+      if ([1, 2, 5].includes(chapter)) {
+        const target = chapter === 5 ? [1, 1, 1, 1] : Array.from({ length: 4 }, (_, i) => [1, 3, 2, 0][(i + chapter) % 4]);
+        for (let i = 0; i < 4; i++) while (state(engine).puzzle[i] !== target[i]) engine.choose!(`rotate:${i}`);
+      }
+      engine.choose!("close");
+    } else if (game.slug === "ibl") {
+      world.gather("W"); world.gather("O");
+      for (const id of world.ids("P")) { world.visit(id); world.work(35); }
+      for (let i = 0; i < 510; i++) tick(engine);
+      for (const id of world.ids("P")) { world.visit(id); world.work(30); }
+      press(engine, "alt"); expect(engine.view().choices!.find(c => c.id === "build")!.disabled).toBe(false);
+      engine.choose!("build"); expect(state(engine).crafted).toBe(true);
+    } else {
+      world.gather("G");
+      for (const id of world.ids("B")) { world.visit(id); world.work(60); }
+      if (chapter === 5) for (let attempts = 0; state(engine).enemies.some(a => a.hp > 0) && attempts < 10; attempts++) { const a = state(engine).enemies.find(a => a.hp > 0)!; world.visit(Math.floor(a.y / 92) * 16 + Math.floor(a.x / 92)); world.work(200); }
+      expect(state(engine).beacons.length).toBe(world.ids("B").length);
+    }
+    engine.choose!("close");
+    if (game.slug !== "eov") {
+      press(engine, "alt"); const choice = engine.view().choices!.find(c => c.id.startsWith("buy:") && !c.disabled);
+      if (choice) engine.choose!(choice.id); engine.choose!("close");
+    }
+    const saved = engine.save(), restored = createAdventureEngine({ campaign: game, chapterIndex: chapter, restored: JSON.parse(JSON.stringify(saved)) });
     expect(restored.save()).toEqual(saved);
-    for (const button of ["down", "right", "action", "alt", "up", "left"] as GameButton[]) { press(engine, button); press(restored, button); expect(restored.save()).toEqual(engine.save()); }
-    const mutations: Record<string, unknown>[] = [
-      { ...saved, chapter: 99 }, { ...saved, x: -1 }, { ...saved, x: 0, y: 0 }, { ...saved, health: 999 },
-      { ...saved, movementClock: NaN }, { ...saved, picked: [1, 1] }, { ...saved, injected: true },
-      { ...saved, planted: [{ id: 17, turn: 0 }] }, { ...saved, status: "won" }, { ...saved, runeProgress: 99 },
-      { ...saved, enemies: [{ id: 0, hp: 1 }] }, { ...saved, reserve: -1 }, { ...saved, message: 5 },
-    ];
-    for (const malformed of mutations) expect(() => createAdventureEngine({ campaign, chapterIndex: 0, restored: malformed })).toThrow(/Invalid adventure save/);
-    saved.x = 14; expect(snapshot(restored).x).not.toBe(14); // saved objects never alias engine state
-  });
-}
-
-test("Hollow Crown: sentinels counterattack, brace absorbs hits, and a lost battle stops input", () => {
-  const campaign = ADVENTURE_CAMPAIGNS.find(game => game.slug === "hcr")!;
-  const engine = createAdventureEngine({ campaign, chapterIndex: 0 });
-  const world = explorer(campaign, 0, engine);
-  world.visit(world.ids("M")[0] - 1);
-  const health = snapshot(engine).health;
-  press(engine, "alt"); press(engine, "action");
-  expect(snapshot(engine).health).toBe(health);
-  expect(snapshot(engine).enemies.find(enemy => enemy.id === world.ids("M")[0])!.hp).toBe(0);
-  world.visit(world.ids("M")[1] - 1);
-  for (let attempts = 0; attempts < 30 && engine.view().status === "playing"; attempts++) press(engine, "alt");
-  expect(engine.view().status).toBe("lost");
-  const lost = engine.save(); press(engine, "action"); expect(engine.save()).toEqual(lost);
-  expect(createAdventureEngine({ campaign, chapterIndex: 0, restored: lost }).view().status).toBe("lost");
+    const resumedWorld = explorer(game, chapter, restored); resumedWorld.visit(resumedWorld.ids("E")[0]);
+    expect(restored.view().status, `${game.slug} chapter${chapter + 1}: ${JSON.stringify(restored.view())}`).toBe("won");
+    progression = restored.progression!();
+    expect(progression).toEqual(createAdventureEngine({ campaign: game, chapterIndex: chapter, restored: restored.save() }).progression!());
+  }
 });
-
-test("Echoes of Vael: unread runes refuse input; wrong memories reset progress and deplete resolve", () => {
-  const campaign = ADVENTURE_CAMPAIGNS.find(game => game.slug === "eov")!;
-  const engine = createAdventureEngine({ campaign, chapterIndex: 0 });
-  const world = explorer(campaign, 0, engine);
-  world.visit(world.ids("1")[0]); press(engine, "action");
-  expect(snapshot(engine).runeProgress).toBe(0); expect(snapshot(engine).health).toBe(6);
-  world.gather("F"); world.visit(world.ids("1")[0]); press(engine, "action");
-  expect(snapshot(engine).runeProgress).toBe(1);
-  world.visit(world.ids("4")[0]); press(engine, "action");
-  expect(snapshot(engine).runeProgress).toBe(0); expect(snapshot(engine).health).toBe(5);
-  for (let mistakes = 0; mistakes < 5; mistakes++) press(engine, "action");
-  expect(engine.view().status).toBe("lost");
+for (const game of ADVENTURE_CAMPAIGNS) test(`${game.title}: exact simulation save, validated carryover and replay rewards are idempotent`, () => {
+  const options = { campaign: game, chapterIndex: 0 }, engine = createAdventureEngine(options);
+  for (let i = 0; i < 120; i++) tick(engine, ["right"]);
+  const restored = createAdventureEngine({ ...options, restored: engine.save() });
+  for (let i = 0; i < 100; i++) { tick(engine, ["down", "action"]); tick(restored, ["down", "action"]); }
+  expect(restored.save()).toEqual(engine.save());
+  const saved = engine.save();
+  for (const invalid of [{ ...saved, v: 1 }, { ...saved, chapter: 99 }, { ...saved, checksum: "bad" }, { ...saved, extra: true }, { ...saved, data: { ...state(engine), player: { ...state(engine).player, x: NaN } } }]) expect(() => createAdventureEngine({ ...options, restored: invalid })).toThrow(/Invalid adventure/);
+  expect(() => createAdventureEngine({ ...options, progression: { ...engine.progression!(), coins: -1 } })).toThrow(/Invalid adventure progression/);
+  const fresh = createAdventureEngine(options), world = explorer(game, 0, fresh), char = game.slug === "hcr" ? "K" : game.slug === "eov" ? "F" : game.slug === "ibl" ? "W" : "G";
+  const id = world.ids(char)[0]; world.visit(id); world.work();
+  const earned = fresh.progression!();
+  const replay = createAdventureEngine({ ...options, progression: earned }), repeat = explorer(game, 0, replay);
+  repeat.visit(id); repeat.work(); expect(replay.progression!()).toEqual(earned);
 });
-
-test("Ironbloom: recipes consume resources, flowers need three turns, and exhaustion is a real failure", () => {
-  const campaign = ADVENTURE_CAMPAIGNS.find(game => game.slug === "ibl")!;
-  const engine = createAdventureEngine({ campaign, chapterIndex: 0 });
-  const world = explorer(campaign, 0, engine);
-  press(engine, "alt"); expect(snapshot(engine).crafted).toBe(false);
-  world.gather("W", 1); world.visit(world.ids("P")[0]); press(engine, "action");
-  press(engine, "action"); expect(snapshot(engine).harvested).toEqual([]);
-  while (engine.view().status === "playing") press(engine, "alt");
-  expect(engine.view().status).toBe("lost"); expect(snapshot(engine).reserve).toBe(0);
+test("Hollow Crown: visible telegraphs hurt an idle hero; dodge consumes stamina and a defeat freezes simulation", () => {
+  const game = ADVENTURE_CAMPAIGNS.find(g => g.slug === "hcr")!, engine = createAdventureEngine({ campaign: game, chapterIndex: 0 }), world = explorer(game, 0, engine);
+  world.visit(world.ids("M")[0], false);
+  const hp = state(engine).player.hp;
+  let telegraphed = false;
+  for (let i = 0; i < 600; i++) { tick(engine); telegraphed ||= state(engine).enemies.some(a => a.phase === 1); }
+  expect(telegraphed).toBe(true); expect(state(engine).player.hp).toBeLessThan(hp);
+  engine.update(1 / 60, { held: new Set(["right"]), pressed: new Set(["alt"]) }); expect(state(engine).player.stamina).toBeLessThan(80);
+  for (let i = 0; i < 6000 && engine.view().status === "playing"; i++) tick(engine);
+  expect(engine.view().status).toBe("lost"); const lost = engine.save(); tick(engine, ["action"]); expect(engine.save()).toEqual(lost);
 });
-
-test("Saltwind Sagas: low tide blocks shallows, storm damages hull and salvage can repair it", () => {
-  const campaign = ADVENTURE_CAMPAIGNS.find(game => game.slug === "sws")!;
-  const engine = createAdventureEngine({ campaign, chapterIndex: 0 });
-  const world = explorer(campaign, 0, engine);
-  world.gather("G", 1);
-  const shallows = world.ids("R")[0]; world.visit(shallows - 1);
-  while (Math.floor(snapshot(engine).turn / 3) % 2 !== 0) press(engine, "alt");
-  const position = world.position(), turn = snapshot(engine).turn;
-  press(engine, "right"); expect(world.position()).toBe(position); expect(snapshot(engine).turn).toBe(turn);
-  while (Math.floor(snapshot(engine).turn / 3) % 2 === 0) press(engine, "alt");
-  press(engine, "right"); expect(world.position()).toBe(shallows);
-  const storm = world.ids("X")[0]; world.visit(storm);
-  expect(snapshot(engine).health).toBe(9); press(engine, "action"); expect(snapshot(engine).health).toBe(10);
-  for (let crossing = 0; crossing < 10; crossing++) { press(engine, "left"); press(engine, "right"); }
-  expect(engine.view().status).toBe("lost");
+test("Ironbloom: renewable plants support optional requests without blocking the repair", () => {
+  const game = ADVENTURE_CAMPAIGNS.find(g => g.slug === "ibl")!, engine = createAdventureEngine({ campaign: game, chapterIndex: 0 }), world = explorer(game, 0, engine);
+  world.gather("W"); world.visit(world.ids("P")[0]); world.work(30);
+  expect(state(engine).blooms).toBe(0);
+  for (let i = 0; i < 510; i++) tick(engine); world.work(30); expect(state(engine).blooms).toBe(1);
+  for (let i = 0; i < 510; i++) tick(engine); world.work(30); expect(state(engine).blooms).toBe(2);
 });
-
-test("adventure pointer controls move on the map and act under the hero", () => {
-  const campaign = ADVENTURE_CAMPAIGNS.find(game => game.slug === "eov")!;
-  const engine = createAdventureEngine({ campaign, chapterIndex: 0 });
-  engine.update(0.17, { held: new Set(), pressed: new Set(), pointer: { x: 24 + 2 * 46 + 23, y: 68 + 46 + 23, down: true, pressed: true } });
-  expect(snapshot(engine)).toMatchObject({ x: 2, y: 1, turn: 1 });
-  const world = explorer(campaign, 0, engine); world.visit(world.ids("F")[0]);
-  const s = snapshot(engine);
-  engine.update(0.17, { held: new Set(), pressed: new Set(), pointer: { x: 24 + s.x * 46 + 23, y: 68 + s.y * 46 + 23, down: true, pressed: true } });
-  expect(snapshot(engine).picked).toContain(world.ids("F")[0]);
+test("Archive exploration reveals clue fragments; a mechanism decision pauses the exact world state", () => {
+  const game = ADVENTURE_CAMPAIGNS.find(g => g.slug === "eov")!, engine = createAdventureEngine({ campaign: game, chapterIndex: 1 }), world = explorer(game, 1, engine);
+  expect(engine.view().selection).not.toContain("3, 2, 0, 1");
+  world.visit(world.ids("F")[0]); world.work();
+  expect(engine.view().selection).toContain("Folio"); expect(engine.view().selection).not.toContain("3, 2, 0, 1");
+  world.gather("F"); expect(engine.view().selection).toContain("3, 2, 0, 1");
+  world.visit(world.ids("1")[0], false); engine.choose!("close"); for (let i = 0; i < 30; i++) tick(engine); press(engine, "action");
+  expect(engine.view().choiceMode).toBe("modal"); const paused = engine.save();
+  engine.update(.25, { held: new Set(["right", "action"]), pressed: new Set(["alt"]) }); expect(engine.save()).toEqual(paused);
+  const restored = createAdventureEngine({ campaign: game, chapterIndex: 1, restored: paused }); expect(restored.view().choices).toEqual(engine.view().choices);
 });
-
-test("Saltwind Sagas: wasting finite repair supplies triggers a useful failure instead of stranding the campaign", () => {
-  const campaign = ADVENTURE_CAMPAIGNS.find(game => game.slug === "sws")!;
-  const engine = createAdventureEngine({ campaign, chapterIndex: 0 });
-  const world = explorer(campaign, 0, engine);
-  world.gather("G"); world.visit(world.ids("X")[0]);
-  press(engine, "action");
-  for (let repair = 0; repair < 2; repair++) { press(engine, "left"); press(engine, "right"); press(engine, "action"); }
-  expect(snapshot(engine).health).toBe(10);
-  expect(engine.view().status).toBe("lost");
-  expect(engine.view().message).toContain("reserve one supply");
-  expect(createAdventureEngine({ campaign, chapterIndex: 0, restored: engine.save() }).view().status).toBe("lost");
+test("Adventure restore rejects wrong equipment, impossible UI and entity state even with a valid checksum", () => {
+  const hash = (s: string) => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return (h >>> 0).toString(16); };
+  const game = ADVENTURE_CAMPAIGNS.find(g => g.slug === "hcr")!, engine = createAdventureEngine({ campaign: game, chapterIndex: 0 });
+  for (const changed of [
+    { ...state(engine), panel: "puzzle" },
+    { ...state(engine), player: { ...state(engine).player, hp: 200 } },
+    { ...state(engine), enemies: state(engine).enemies.map((a, i) => i ? a : { ...a, phase: 9 }) },
+    { ...state(engine), enemies: state(engine).enemies.map((a, i) => i ? a : { ...a, hp: a.hp - .5 }) },
+    { ...state(engine), progress: { ...engine.progression!(), mast: 1 } },
+    { ...state(engine), progress: { ...engine.progression!(), rewards: ["8:find:12"] } },
+  ]) {
+    const restored = { ...engine.save(), data: changed, checksum: hash(JSON.stringify(changed)) };
+    expect(() => createAdventureEngine({ campaign: game, chapterIndex: 0, restored })).toThrow(/Invalid adventure/);
+  }
 });

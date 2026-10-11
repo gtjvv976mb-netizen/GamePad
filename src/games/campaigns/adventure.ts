@@ -98,3 +98,56 @@ const saltwind: Campaign = {
 };
 
 export const ADVENTURE_CAMPAIGNS: Campaign[] = [hollow, echoes, ironbloom, saltwind];
+
+// These chapters are staged as scrolling worlds with physical props, inhabitants,
+// keeper requests and equipment carried along the journey.
+const SCENES: Record<string, string[]> = {
+  hcr: ["Bellkeeper's crossing", "Ash orchard", "Drowned nave", "Winter observatory", "People's vault", "The public throne"],
+  eov: ["Forgotten vestibule", "River pump gallery", "Living shelf garden", "Constellation observatory", "Witness court", "Public library heart"],
+  ibl: ["Greenhouse latch", "Cistern pump", "Nursery bridge", "Leaf windmill", "Rustwater filter", "Flowering arch"],
+  sws: ["Lantern harbor", "Bell reef", "Storm compass", "Watchkeeper isles", "Narrow current", "The home fleet"],
+};
+const KEEPERS: Record<string, string[]> = {
+  hcr: ["Iona: The bell still knows our names. Find the ember, and listen to the ordinary promise it carries.", "The orchard keeper: My trees turned to ash when the palace kept the harvest. Bring the two lost orchard notes back to me.", "The cantor: We were told to sing only for a king. The song embers will let the choir remember its own voices.", "The astronomer: I hid winter's charts from the valley. Recover what the watchers guard, and we can share the truth.", "The mason: A baker's promise and my oath built this place. Those promises belong to the people outside it.", "Iona: The king offers you a throne. Remember the people whose names lit your crown; the public gate is waiting."],
+  eov: ["The librarian: The door remembers symbols but has forgotten the child who borrowed its first book. Reassemble the folios before you attune its seal.", "The mapmaker: My river was erased to straighten a border. Four water valves can reconnect its villages; the folios show their settings.", "The gardener: The famine ledger hid our names. Turn the four living shelves until our seed paths connect again.", "The astronomer: My letters were questions, never commandments. Their constellation order survives in three original folios.", "The witness: The record loops back because I was interrupted. Follow every repeated testimony, and let the court hear the whole account.", "The librarian: Recover the last city memory. Then turn on all four public reading lights; a library needs both its stories and its readers."],
+  ibl: ["Your neighbor: The greenhouse latch is jammed. One blooming bed can grow flowers forever; leave yourself two beams for the repair.", "The cistern keeper: Two ironflowers can bind roots inside our hand pump. Planted beds cost one beam each, so gather before you sow.", "The nursery keeper: Our seedlings need a bridge across the furnace. Rustwater stains the ground nearby; keep clear until the repair is finished.", "The lamp maker: Three flowers will become living windmill blades. Sharper tools speed the harvest, and the finished mill powers this workshop.", "The stream keeper: The rustwater filter needs three scrap pieces and three flowers. Finish its frame and our stream can run clear again.", "Your neighbor: The old factory gate kept people out. Build a flowering arch, and the Commons can welcome everyone."],
+  sws: ["The harbor keeper: Two wreck charts mark the homeward route. A tide rises and falls every six seconds; the pale reefs close at low water.", "The bell keeper: Light both island towers. Your hull can drift after you release the helm, so steer gently against its momentum when you dock.", "The compass keeper: The compass ship broke in the storm. Recover all three pieces; your cannon can drive away the raider guarding them.", "The watchkeeper: My children have waited a season for sails. Three fires can guide the fleet around our sleeping islands.", "The channel keeper: Our three lights draw a safe curve through the current. Avoid the whirlpool and keep extra supplies for hull repairs.", "The harbor keeper: The admiral's raider blocks the public channel. Silence its cannon, light every beacon, and bring the little fishing boats home too."],
+};
+for (const game of ADVENTURE_CAMPAIGNS) {
+  game.description = game.slug === "hcr" ? "A dark fantasy action adventure through six ruined districts. Recover royal embers, earn equipment, dodge telegraphed strikes and face the Hollow King's changing attacks."
+    : game.slug === "eov" ? "Explore a living archive, meet its keepers and piece together folios. Restore water valves, moving shelves, constellations and a public library using the clues you discover."
+      : game.slug === "ibl" ? "Build a shared garden from a silent factory. Harvest timber and ore with upgradeable tools, grow renewable ironflowers, help neighbors and bring six machines to life."
+        : "Captain a little cutter through six archipelagos. Sail with shifting wind and tides, chart wrecks, trade upgrades, exchange cannon fire with raiders and guide a fleet home.";
+  game.controls = game.slug === "hcr" ? "Arrows/WASD or stick move continuously. Hold primary to swing at nearby foes or interact with finds. Moving + secondary dodges using stamina; standing still + secondary opens persistent equipment. Enemy orange circles announce an incoming attack. Keepers offer optional requests."
+    : game.slug === "eov" ? "Move around the archive with arrows/WASD or the pad. Primary inspects nearby folios, mechanisms and keepers. Secondary toggles the memory lens and recovered clue. Mechanism decisions appear as accessible buttons. Wrong choices gently reset the memory."
+      : game.slug === "ibl" ? "Move with arrows/WASD or the pad. Hold primary near timber or ore to harvest; use primary near beds to plant for one wood or collect a mature flower. Flowers bloom in eight seconds and regrow. Secondary opens crafting and tool upgrades. Keepers request a spare flower."
+        : "Arrows/WASD or stick steer the cutter; momentum and wind influence its movement. Hold primary to fire at nearby raiders, or salvage and light beacons when clear. Secondary opens ship upgrades and safe repairs. Reef shallows open for six seconds at high tide. Keepers offer optional treasure requests.";
+  game.actionLabel = game.slug === "hcr" ? "Swing / interact" : game.slug === "eov" ? "Inspect / speak" : game.slug === "ibl" ? "Harvest / tend" : "Cannon / dock";
+  game.altLabel = game.slug === "hcr" ? "Dodge / equipment" : game.slug === "eov" ? "Memory lens" : game.slug === "ibl" ? "Craft / tools" : "Shipyard";
+  game.chapters.forEach((chapter, i) => {
+    chapter.config.setpiece = SCENES[game.slug][i];
+    chapter.config.arrival = `${SCENES[game.slug][i]}. Visit the keeper near your arrival point for local advice and an optional request.`;
+    chapter.config.dialogue = game.slug === "hcr" ? "The wardens announce their attacks with orange circles. Dodge through the strike, recover your stamina and counter while they rest. Hidden caches fund a stronger blade; return both notes to help me restore this place."
+      : game.slug === "eov" ? "Every recovered folio belongs to a mechanism in this district. Gather them all, then inspect a marked station. Your memory lens repeats the exact clue. The archive asks you to understand its people as well as its locks."
+        : game.slug === "ibl" ? "Your tools can be sharpened with earned crowns. Planted flowers keep regrowing: finish the town's repair, then bring a spare bloom to my garden. The finished machine changes this district for everyone."
+          : "The cutter's momentum and the tide matter. Orange warnings mean a raider is preparing a shot. Beacons each need one supply; the shipyard keeps those supplies safe. Two expedition caches contain the missing letters my family sent.";
+    chapter.config.dialogue = `${KEEPERS[game.slug][i]} ${chapter.config.dialogue}`;
+    if (game.slug === "eov") chapter.config.clue = i === 1 ? "River valves, west to east: 3, 2, 0, 1. Rotate each wheel to its marked setting."
+      : i === 2 ? "Living shelves, west to east: 2, 0, 1, 3. Turn each shelf until the gardeners' paths reconnect."
+        : `${(chapter.config.sequence as number[]).map(n => ["SUN", "WAVE", "ROOT", "MOON"][n - 1]).join(" → ")}.${i === 5 ? " Then set all four public lights to 1." : " Follow this order after recovering all folios."}`;
+    if (game.slug === "hcr") chapter.briefing = chapter.briefing.replace(/brace/gi, "dodge");
+    if (game.slug === "eov") {
+      chapter.briefing = chapter.briefing.replace("walk the rune order they reveal", "inspect a marked station and attune the rune order they reveal");
+      if (i === 1) { chapter.briefing = "A mapmaker erased a river to make a border straighter. Recover the folios describing its true course, then inspect a marked valve station. Rotate the four water wheels to the west-to-east settings revealed by the pages."; chapter.objective = "Recover the three river folios, restore all four water valves and reach the archive door."; }
+      if (i === 2) { chapter.briefing = "The archive remembers a famine but not the gardeners who ended it. Find their three seed folios behind the shelves. Inspect a marked station and rotate the four living shelves to reconnect the paths shown in the ledger."; chapter.objective = "Recover the three seed folios, align the four living shelves and open the garden passage."; }
+      if (i === 5) { chapter.briefing += " After attuning the memory, set all four public reading lights to 1."; chapter.objective = "Recover the final folios, attune the city memory and switch on all four public lights."; }
+    }
+    if (game.slug === "ibl") chapter.briefing = chapter.briefing.replace("three turns", "eight seconds").replace("your energy", "your health");
+    if (game.slug === "sws") chapter.briefing = chapter.briefing.replace("Anchor to wait for high tide at the shallows.", "Wait in open water for high tide at the pale shallows.").replace("three turns at a time", "six seconds at a time");
+    if (game.slug === "sws" && i === 5) { chapter.briefing += " Defeat the harbor raider before the home channel will open."; chapter.objective = "Recover every chart, light all three public beacons and defeat the harbor raider."; }
+    if (game.slug === "hcr") chapter.briefing += " Orange attack circles give you time to dodge. Crowns and equipment persist along your journey.";
+    if (game.slug === "hcr" && i === 5) chapter.objective = "Defeat the two captains and the Hollow King, recover the oath ember and open the public gate.";
+    if (game.slug === "ibl") chapter.briefing += " Mature ironflowers regrow, so you can help the keeper after finishing the repair.";
+    if (game.slug === "sws" && i >= 2) chapter.briefing += " Raiders patrol the wrecks. Your cannon aims at the nearest ship; move away from their warning shots.";
+  });
+}

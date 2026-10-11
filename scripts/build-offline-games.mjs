@@ -8,7 +8,8 @@ const metadata = await build({ entryPoints: [resolve(root, "src/games/campaigns/
 const { CAMPAIGNS } = await import(`data:text/javascript;base64,${Buffer.from(metadata.outputFiles[0].text).toString("base64")}`);
 if (CAMPAIGNS.length !== 16 || new Set(CAMPAIGNS.map(c => c.slug)).size !== 16) throw new Error("The offline catalog must contain 16 unique campaigns.");
 const runtime = await build({ entryPoints: [resolve(root, "src/games/standalone.ts")], bundle: true, write: false, format: "iife", platform: "browser", target: "es2022", minify: true, legalComments: "none" });
-const script = runtime.outputFiles[0].text.replace(/<\/script/gi, "<\\/script");
+const art = Object.fromEntries(await Promise.all(["fantasy", "space", "strategy"].map(async name => [name, `data:image/png;base64,${(await readFile(resolve(root, `src/games/assets/${name}-atlas.png`))).toString("base64")}`])));
+const script = (`globalThis.__GAMEPAD_ART__=${JSON.stringify(art)};` + runtime.outputFiles[0].text).replace(/<\/script/gi, "<\\/script");
 const css = await readFile(resolve(root, "src/games/standalone.css"), "utf8");
 const out = resolve(root, "public/games");
 await mkdir(out, { recursive: true });
