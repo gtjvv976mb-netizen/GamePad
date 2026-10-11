@@ -1,6 +1,6 @@
 # Original game sprite art
 
-Generated with the built-in imagegen tool on 11 October 2026. The delivered files are transparent 1254×1254 PNGs with 16 original sprites each. The offline build embeds all three atlases. Runtime uses explicit silhouette bounds in `art.ts` to avoid neighboring sprite fragments and preserve proportions. The prompts below are retained verbatim; no Steam artwork was used.
+Generated with the built-in imagegen tool on 11 October 2026. The delivered files are transparent 1254×1254 PNGs with 16 original sprites each. Each offline game embeds its required atlases; `manifest.json` records the included groups. Runtime uses explicit silhouette bounds in `art.ts` to avoid neighboring sprite fragments and preserve proportions. The prompts below are retained verbatim; no Steam artwork was used.
 
 ## fantasy
 

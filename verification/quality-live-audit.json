@@ -1,0 +1,145 @@
+{
+  "sourceCommit": "9b7ff4d562a09d05fd0d223003615eb5cf8b5acd",
+  "checkedUTC": "2026-10-11T16:35:52.969Z",
+  "sourceURL": "https://gamedotpad.com/",
+  "allMatching": true,
+  "files": [
+    {
+      "file": "games/manifest.json",
+      "bytes": 3603,
+      "sha256": "0736891785d80efcb5381667e3cd6edf17f8e848c211e579665e5cb41b88ba1f",
+      "matchesLocal": true
+    },
+    {
+      "file": "games/ndp.html",
+      "bytes": 2810828,
+      "sha256": "644d13c79ecb47c34db47ac134428696d243d5932e2af8f3e2b07011867a8686",
+      "matchesLocal": true
+    },
+    {
+      "file": "games/osv.html",
+      "bytes": 2810820,
+      "sha256": "65ac7b55647b642cd57850aba2722d1a58db58726babb218ef338bc9c826843c",
+      "matchesLocal": true
+    },
+    {
+      "file": "games/slc.html",
+      "bytes": 2810824,
+      "sha256": "98c04f035c46f1ffc3dd5060fd45be01ec85847a4d68dd3dd230ab73f50efbac",
+      "matchesLocal": true
+    },
+    {
+      "file": "games/dpt.html",
+      "bytes": 2810808,
+      "sha256": "66b0651dfd56a3b5e24e0a763c084e6fcd4f12ef5031f547f20ec5c96fa83924",
+      "matchesLocal": true
+    },
+    {
+      "file": "games/gla.html",
+      "bytes": 2810818,
+      "sha256": "c8e874f0de8f50b541dcd9e823c89d1908b83b8bb28887b6e2deee9c0a47456e",
+      "matchesLocal": true
+    },
+    {
+      "file": "games/rrn.html",
+      "bytes": 5270449,
+      "sha256": "1e3f145131182508b509fe50623e60d660166b594b16dedc77c37949934a83b2",
+      "matchesLocal": true
+    },
+    {
+      "file": "games/hcr.html",
+      "bytes": 5980340,
+      "sha256": "9bc378374faa5e2b6ca99d3c043d51019a02711e27a6182cd2f433280d388b23",
+      "matchesLocal": true
+    },
+    {
+      "file": "games/eov.html",
+      "bytes": 5980344,
+      "sha256": "084302ac674bfafc99df16d228c9d0a9427f63a82186f28bb85ba0a5be3966fc",
+      "matchesLocal": true
+    },
+    {
+      "file": "games/ibl.html",
+      "bytes": 5980334,
+      "sha256": "5b108cbbdb95cc976c723652284184ba8a6124420a58619c833eb51960d8627c",
+      "matchesLocal": true
+    },
+    {
+      "file": "games/sws.html",
+      "bytes": 5980344,
+      "sha256": "7b8004ded4c8e191f5e0a52514abff7e6b8f408af8d3907f8cf30a7f1ae3b484",
+      "matchesLocal": true
+    },
+    {
+      "file": "games/ptv.html",
+      "bytes": 5980340,
+      "sha256": "ddb6040a3234dc943e06a252bc43128def6fcaa58328a3567bc52d3b0e38f97a",
+      "matchesLocal": true
+    },
+    {
+      "file": "games/kkn.html",
+      "bytes": 5980342,
+      "sha256": "ce8a40a07562a36fc2d0e385b3be55d7db992a3f7115fb6460879e3850849f33",
+      "matchesLocal": true
+    },
+    {
+      "file": "games/sft.html",
+      "bytes": 5980350,
+      "sha256": "ef364503e0fdabff6db1e538aa69254b44c0e28e8e179acfce8268ced99c6f3f",
+      "matchesLocal": true
+    },
+    {
+      "file": "games/mmr.html",
+      "bytes": 5980350,
+      "sha256": "49e2ec1c206a5ff406ace78f8a4c66899ff702516f84c0ecd03619ac64563b7a",
+      "matchesLocal": true
+    },
+    {
+      "file": "games/cbz.html",
+      "bytes": 5980342,
+      "sha256": "3914b5559af75bb2c70b4a268cf4bd69c406dbc95340c0c622a85630000a6dbc",
+      "matchesLocal": true
+    },
+    {
+      "file": "games/lmc.html",
+      "bytes": 5980342,
+      "sha256": "3afb4cd51517e536f4253acae7819c31ed4bf4043427c291f94faa2f0ea27f80",
+      "matchesLocal": true
+    }
+  ],
+  "frontend": {
+    "localEntrypoint": "assets/index-8zL3KCWP.js",
+    "publishedEntrypoint": "assets/index-DLuseKx0.js",
+    "referencesLocalEntrypoint": false,
+    "matchesPagesEnvironmentBuild": true,
+    "buildEnvironmentDifference": "Pages explicitly defines VITE_STORE_PROGRAM_DEVNET and VITE_SOLANA_RPC as empty strings; local build omits them.",
+    "hasLoadingStatus": true,
+    "hasAll16Campaigns": true,
+    "assets": [
+      {
+        "file": "assets/index-DLuseKx0.js",
+        "bytes": 290283,
+        "sha256": "6f08cf37b6ab1f520fc157a1e655fba4488d69e694f7cd0f0e333a65c350cad5",
+        "matchesPagesEnvironmentBuild": true
+      },
+      {
+        "file": "assets/three-DzoerC0K.js",
+        "bytes": 1215605,
+        "sha256": "2952b4c4e46b194775bd44a2aa425bb71d835cded8fc3fc25685137bddb2208e",
+        "matchesPagesEnvironmentBuild": true
+      },
+      {
+        "file": "assets/web3-DX7XT6Ly.js",
+        "bytes": 84777,
+        "sha256": "d153f9e58aa74a39b96fc11110d569b010c8d765423499dbd0470e23501426ad",
+        "matchesPagesEnvironmentBuild": true
+      },
+      {
+        "file": "assets/index-BHfDZIMH.css",
+        "bytes": 37343,
+        "sha256": "00dea089a1f2fcf791a41cb8269e464111fc0e7fde55c13f310aaad87caff93b",
+        "matchesPagesEnvironmentBuild": true
+      }
+    ]
+  }
+}
