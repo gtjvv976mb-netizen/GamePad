@@ -57,4 +57,19 @@ URL scans need Chrome or Chromium (set `IMPECCABLE_BROWSER` to its path if it is
 
 ## Deploying the site
 
-`.github/workflows/pages.yml` publishes to GitHub Pages, but only when someone runs it by hand from the Actions tab. Nothing goes public automatically.
+The site lives at [gamedotpad.com](https://gamedotpad.com), served by GitHub Pages. `.github/workflows/pages.yml` builds `main` and publishes it; run it from the Actions tab.
+
+One-time setup, done by the repository owner:
+
+1. **GitHub:** Settings → Pages → Build and deployment → Source: **GitHub Actions**. Under Custom domain enter `gamedotpad.com` and save; once the certificate is issued, tick **Enforce HTTPS**.
+2. **Namecheap:** Domain List → gamedotpad.com → Manage → Advanced DNS. Remove the parking records (the `www` CNAME to `parkingpage.namecheap.com` and the `@` URL redirect), then add:
+
+   | Type | Host | Value |
+   |---|---|---|
+   | A Record | `@` | `185.199.108.153` |
+   | A Record | `@` | `185.199.109.153` |
+   | A Record | `@` | `185.199.110.153` |
+   | A Record | `@` | `185.199.111.153` |
+   | CNAME Record | `www` | `gtjvv976mb-netizen.github.io.` |
+
+Without a store address in the repository variables `VITE_STORE_ADDRESS_BASE_SEPOLIA` / `VITE_STORE_ADDRESS_SEPOLIA`, the live site runs in preview mode.

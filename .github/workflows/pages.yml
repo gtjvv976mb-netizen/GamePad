@@ -1,5 +1,5 @@
-# Publishes the site to GitHub Pages. Manual only: run it from the Actions tab when you're
-# ready for the site to be public (and enable Pages with "GitHub Actions" as the source).
+# Publishes main to GitHub Pages at gamedotpad.com. Run it from the Actions tab. One-time setup
+# (Pages source "GitHub Actions", the custom domain and the Namecheap DNS records) is in README.md.
 name: Deploy to GitHub Pages
 
 on:
