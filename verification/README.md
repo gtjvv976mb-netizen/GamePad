@@ -15,3 +15,23 @@ The full local browser run passed 38 cases, skipped 12 and hit a timeout in the 
 Browser live-mode tests use the real app providers and transaction serialization with mocked RPC/wallet responses. Rust behavior tests use the offline Solana test bank. No live devnet purchase, funding or deployment occurred. The published site and GitHub Actions history were verified separately; its store program variable is still absent.
 
 The SBF artifact is `program/target/deploy/gamepad_store.so` (372,696 bytes), SHA-256 `56444e6e8f1b525e8962466593170a0fb3cf64e871b20c73530cf4f50ce0eaed`. It is prepared for public program ID `7WBHwtN7nZELLnhKAC3GiwZ4RTBjZPaGTrL9LbqYowS5`, not yet deployed. Private keys and tool downloads are ignored and not included in Git.
+
+## Original offline campaigns
+
+| Check | Result |
+| --- | --- |
+| Production TypeScript/Vite build and offline generation | Pass; 16 games, 90 chapters |
+| Action engine models | 13 cases pass; all 30 chapters complete through controls |
+| Adventure engine models | 34 cases pass; all 24 chapters complete through controls |
+| Strategy engine models | 41 cases pass; all 36 chapters complete through controls |
+| Offline/runtime browser checks | 44 pass across desktop and phone |
+| Full app and game Playwright suite | 185 pass, 87 intentional skips, 32.1 seconds |
+| Git whitespace and ignored-key checks | Pass |
+
+Every downloaded game was opened with a `file://` URL and network disabled. Checks cover meaningful input, rendering, pause, exact save/resume, malformed saves, export/import, wrong-game rejection, blocked-storage fallback, standard controller input and touch controls. A complete six-chapter Lumen Cascade campaign was solved through board taps and keys, with unlocks, reload and a persistent ending. Store trials, Library full campaigns, standalone downloads, phone text legibility and short desktop windows were also verified. Existing store, resale, wallet, motion and mocked live-mode regressions pass.
+
+The 87 skips comprise 75 duplicate Node model cases on the phone project (34 adventure and 41 strategy) and 12 existing duplicate Node/live or phone-only exclusions. The local run used installed Google Chrome with a temporary local Playwright configuration because the package-matched cached Chromium was unavailable. CI uses the repository configuration and installs its matching Chromium. The temporary configuration is not committed. Final local logs remain ignored at `verification/offline-build.log` and `verification/offline-final-suite.log`.
+
+Screenshots show the full Hollow Crown campaign running inside GamePad: [desktop](gamepad-campaign-desktop.png) and [phone](gamepad-campaign-phone.png).
+
+The on-chain program is unchanged by this feature; its prior native and SBF validation above applies to the merged baseline. No funding, transaction, deployment, Pages publication or account setting was performed for the offline games. Recovery remains partial as recorded in `HANDOFF.md`.

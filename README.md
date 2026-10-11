@@ -4,7 +4,38 @@ A game store where you own the copy. Buy games with SOL, sell them on when you'r
 
 The whole store fits on one screen. Five tabs (left rail on desktop, top bar on phones) switch between Store, Market, Library, Studio and Profile, and a single 3D stage behind them re-stages itself for each one: the selected game floats as a holographic license card, your library fans out like a hand of cards, and the profile shows the controller logo in 3D. Behind it all, a looping clip of floating game worlds joined by bridges of foil light plays full screen, tinted by the selected game's cover.
 
-You can drive it with a real game controller (Gamepad API): d-pad or stick to move, A to buy or confirm, B to go back, X for used copies, LB/RB to switch tabs. On a keyboard: arrows, A or Enter, B or Esc, X, and Q/E or `[`/`]`.
+You can drive it with a real game controller (Gamepad API): d-pad or stick to move, A to buy, play or confirm, B to go back, X for used copies or selling from Library, LB/RB to switch tabs. On a keyboard: arrows, A or Enter, B or Esc, X, and Q/E or `[`/`]`.
+
+## Play the offline campaigns
+
+All 16 catalog titles are original, compact single-player games with authored campaigns, playable objectives, failure/retry and story endings. There are 90 chapters in total. Each game has its own mechanics and original canvas graphics; no external art, API or game service is required during play.
+
+Try the first chapter from Store without a wallet. Purchased games in Library have **Play campaign** and **Download offline**. Open a downloaded `.html` in a modern browser to play its complete campaign without a server, wallet or internet connection. The store's SOL prices and licenses cover its purchase/resale flow; downloaded games run independently.
+
+Use arrows/WASD, Space/Enter for the primary action, X/Shift for the secondary action, and P/Escape to pause. Standard controllers use the stick/D-pad, A/X and Start. Touch controls are on screen; adventures and board games also accept board taps. Each game's briefing explains its mechanics. Browser focus loss pauses gameplay.
+
+Progress saves automatically when browser storage is available. **Controls and save files** offers JSON export/import for backups or moving between devices. Local-file browser storage can vary, so export before moving your game or clearing browser data.
+
+| Game | Chapters | Gameplay |
+| --- | ---: | --- |
+| Neon Drift Protocol | 5 | Steer, thrust, brake and boost through checkpoint circuits |
+| Hollow Crown | 6 | Explore, collect seals, fight sentinels and brace against attacks |
+| Orbital Salvage | 5 | Inertial tug piloting, tractor cargo and dock deliveries |
+| Pixel Tavern | 6 | Mix ordered recipes, manage stock and serve guest tickets |
+| Shardfall Tactics | 6 | Two-unit grid battles, action points, cover and enemy turns |
+| Kaiju Kitchen | 6 | Match monster cravings, chain meals and manage stove heat |
+| Echoes of Vael | 6 | Recover archive folios and decode rune sequences |
+| Gridlock Arena | 5 | Move, fire, dash and survive escalating sentry waves |
+| Moss & Marrow | 6 | Deck battles, damage, guard, growth and reward drafting |
+| Starline Couriers | 5 | Parcel routes, traffic avoidance and battery management |
+| Deep Tide | 5 | Recover relics, navigate currents and ration diving oxygen |
+| Chrono Bazaar | 6 | Buy aging goods and time sales against market deadlines |
+| Rift Runners | 5 | Double-jump, air dash, collect runes and avoid thorns |
+| Ironbloom | 6 | Gather wood/ore, grow flowers and craft garden repairs |
+| Lumen Cascade | 6 | Rotate mirrors and route colored light to receivers |
+| Saltwind Sagas | 6 | Sail tide passages, salvage supplies, light beacons and repair |
+
+`npm run build:games` produces `public/games/*.html` and a size/chapter manifest. `npm run dev` and `npm run build` generate those files automatically; production copies are in `dist/games/`. Campaign content is in `src/games/campaigns/`, engines in `src/games/engines/`, and shared input, save and story UI in `src/games/standalone.ts`. Generated game files are ignored by Git and rebuilt from source.
 
 ## Run it
 
