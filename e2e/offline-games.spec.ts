@@ -3,7 +3,8 @@ import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { readFile } from "node:fs/promises";
 import { CAMPAIGNS } from "../src/games/campaigns";
-import { createStrategyEngine } from "../src/games/engines/strategy";
+import type { Room } from "../src/games/engines/strategy/light";
+import { findLumenPlan } from "./helpers/lumen-plans";
 
 for (const campaign of CAMPAIGNS) {
   test(`${campaign.slug}: downloaded campaign runs and resumes with the network disabled`, async ({ page, context }) => {
@@ -16,6 +17,7 @@ for (const campaign of CAMPAIGNS) {
     await expect(page.locator("#chapter-number")).toHaveText(`Chapter 1 of ${campaign.chapters.length}`);
     await page.getByRole("button", { name: "Start chapter", exact: true }).click();
     await expect(page.locator("#game")).toHaveAttribute("data-phase", "playing");
+    await expect(page.locator("#game")).toHaveAttribute("data-art-ready", "true");
     await page.keyboard.press("ArrowRight");
     await page.keyboard.press("Space");
     await page.getByRole("button", { name: "Pause", exact: true }).click();
@@ -78,7 +80,7 @@ test("touch and gamepad controls operate without a wallet, and pause stops the s
   await expect(page.locator("#game")).toHaveAttribute("data-phase", "playing");
   await page.evaluate(() => { (window as unknown as { padButtons: { pressed: boolean }[] }).padButtons[0].pressed = false; });
   const move = page.getByRole("button", { name: "Move right", exact: true });
-  const initial = await page.evaluate(() => JSON.parse(localStorage.getItem("gamepad-campaign-v1:hcr")!).engine.x);
+  const initial = await page.evaluate(() => JSON.parse(localStorage.getItem("gamepad-campaign-v1:hcr")!).engine.data.player.x);
   await move.scrollIntoViewIfNeeded();
   const bounds = await move.boundingBox();
   await page.mouse.move(bounds!.x + bounds!.width / 2, bounds!.y + bounds!.height / 2);
@@ -87,7 +89,7 @@ test("touch and gamepad controls operate without a wallet, and pause stops the s
   await page.mouse.up();
   await page.getByRole("button", { name: "Pause", exact: true }).click();
   const before = await page.evaluate(() => localStorage.getItem("gamepad-campaign-v1:hcr"));
-  expect(JSON.parse(before!).engine.x).toBeGreaterThan(initial);
+  expect(JSON.parse(before!).engine.data.player.x).toBeGreaterThan(initial);
   await page.waitForTimeout(400);
   expect(await page.evaluate(() => localStorage.getItem("gamepad-campaign-v1:hcr"))).toEqual(before);
   await page.getByRole("button", { name: "Resume chapter", exact: true }).click();
@@ -120,7 +122,7 @@ test("store demos and library full campaigns launch; offline download contains i
   await expect(frame.locator("#chapter-number")).toHaveText("Chapter 1 of 6");
   await frame.getByRole("button", { name: "Start chapter", exact: true }).click();
   await expect(frame.locator("#game")).toHaveAttribute("data-phase", "playing");
-  await page.screenshot({ path: `verification/gamepad-campaign-${test.info().project.name}.png`, fullPage: true });
+  await page.screenshot({ path: `verification/quality-integrated-${test.info().project.name}.png`, fullPage: true });
   await page.getByRole("button", { name: "Back to GamePad", exact: true }).click();
   await expect(page.getByRole("button", { name: "Play campaign", exact: true })).toBeFocused();
 });
@@ -128,8 +130,9 @@ test("store demos and library full campaigns launch; offline download contains i
 test("strategy decisions remain readable on phones and the board fits short windows", async ({ page }) => {
   await page.goto("./games/ptv.html");
   await page.getByRole("button", { name: "Start chapter", exact: true }).click();
+  await page.locator('[data-choice="open"]').click();
   await expect(page.locator("#selection")).toContainText("Moon herb");
-  await page.getByRole("button", { name: "Move right", exact: true }).click();
+  await page.locator("canvas").press("ArrowDown");
   await expect(page.locator("#selection")).toContainText("Ruby berry");
   const selection = page.locator("#selection");
   expect(await selection.evaluate(e => Number.parseFloat(getComputedStyle(e).fontSize))).toBeGreaterThanOrEqual(12);
@@ -167,25 +170,23 @@ test("a complete offline campaign unlocks chapters, survives reload and reaches 
   for (let chapterIndex = 0; chapterIndex < campaign.chapters.length; chapterIndex++) {
     await expect(page.locator("#chapter-number")).toHaveText(`Chapter ${chapterIndex + 1} of 6`);
     await page.getByRole("button", { name: "Start chapter", exact: true }).click();
-    // Find a solution using only the same mirror taps and power pulse available to the player.
-    const mirrors = campaign.chapters[chapterIndex].config.mirrors as { x: number; y: number; fixed?: boolean }[];
-    const mutable = mirrors.map((m, i) => m.fixed ? -1 : i).filter(i => i >= 0);
-    let turns: number[] | undefined;
-    for (let mask = 0; mask < 2 ** mutable.length; mask++) {
-      const engine = createStrategyEngine({ campaign, chapterIndex });
-      const selected = mutable.filter((_, bit) => (mask & 2 ** bit) !== 0);
-      for (const i of selected) engine.update(1 / 60, { held: new Set(), pressed: new Set(), pointer: { x: 35 + (mirrors[i].x + .5) * 64, y: 101 + (mirrors[i].y + .5) * 64, down: false, pressed: true } });
-      engine.update(1 / 60, { held: new Set(), pressed: new Set(["alt"]) });
-      if (engine.view().status === "won") { turns = selected; break; }
-    }
-    expect(turns, `Chapter ${chapterIndex + 1} has a real mirror solution`).toBeDefined();
+    await page.locator('[data-choice="mode:explore"]').click();
+    const rooms = campaign.chapters[chapterIndex].config.rooms as Room[];
     const board = page.locator("canvas");
-    for (const i of turns!) {
-      const bounds = await board.boundingBox();
-      await board.click({ position: { x: (35 + (mirrors[i].x + .5) * 64) / 960 * bounds!.width, y: (101 + (mirrors[i].y + .5) * 64) / 540 * bounds!.height } });
-      await page.waitForTimeout(40);
+    for (let roomIndex = 0; roomIndex < rooms.length; roomIndex++) {
+      const room = rooms[roomIndex], plan = findLumenPlan(room);
+      for (let i = 0; i < room.mirrors.length; i++) if (plan.rotations[i] !== room.mirrors[i].slash) await page.locator(`[data-choice="mirror:${i}"]`).click();
+      for (let i = 0; i < room.shutters.length; i++) await page.locator(`[data-choice="shutter:${i}"]`).click();
+      for (let i = 0; i < plan.prisms.length; i++) {
+        const prism = plan.prisms[i]; if (!prism.movable) continue;
+        await page.locator(`[data-choice="pick:${i}"]`).click();
+        const bounds = await board.boundingBox();
+        await board.click({ position: { x: (93 + prism.x * 70) / 960 * bounds!.width, y: (118 + prism.y * 60) / 540 * bounds!.height } });
+        await page.locator('[data-choice="drop"]').click();
+      }
+      await page.locator('[data-choice="pulse"]').click();
+      if (roomIndex < rooms.length - 1) await page.locator('[data-choice="continue"]').click();
     }
-    await board.press("x");
     await expect(page.locator("#game")).toHaveAttribute("data-phase", "victory");
     if (chapterIndex === 2) {
       await page.reload();

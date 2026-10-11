@@ -59,3 +59,13 @@ The user's 11 October request to integrate the games in the site authorized merg
 Live desktop and phone checks passed the Store first-chapter trial, return to storefront, guest Preview purchase, Library full six-chapter campaign launch, and self-contained HTML download. The existing integration test was run against `https://gamedotpad.com/`: 2 passed in 9.9 seconds. The published manifest and all 16 game HTML files were fetched independently and matched the tested local files by SHA-256. Live screenshots and results are recorded in `verification/README.md`.
 
 No store program or repository deployment variables were configured. Purchasing remains simulated and labeled Preview; published games run locally without a wallet or network service. No funding or on-chain transaction was performed. The remaining devnet steps above still require approval.
+
+## Game quality rebuild — 12 October 2026
+
+The user rejected the prototype quality, requested games comparable in style to the simple and deeper Steam references, and retained the all-16 catalog scope. Work on `codex/game-quality-upgrade` replaces all three game-engine families, their presentation and progression while preserving the store, catalog identities and commercial terms. The earlier instruction to integrate the games authorizes continuing frontend integration and publication; it does not authorize the outstanding on-chain steps.
+
+All 90 chapters complete through actual controls and decisions. New systems include drifting/rivals, physical salvage, scrolling platforming, telegraphed combat, exploration/dialogue/machinery, two-stove service, timed kaiju cooking, specialist tactics, branching deck expeditions, aging caravan trade and multi-room optics. Three generated transparent atlases contain 48 original illustrated sprites; locally synthesized audio works without network requests. See `src/games/DESIGN.md`, `src/games/assets/PROMPTS.md` and `verification/README.md` for scope, provenance and checks.
+
+Production build passes. All 238 full-suite assertions reported passing locally, with 102 intentional skips, but its worker shutdown stalled. The final 58 offline/runtime checks passed with a clean exit in 51.0 seconds; release awaits a complete clean GitHub CI run. Independent review identified focused toolbar Enter/Space interception, which was corrected and covered by a regression. V2 exact saves, equipment and first-clear rewards are validated; older campaign unlocks survive the upgrade.
+
+Recovery remains **partial**; the original program key and full historical Claude transcript remain unavailable. The store program is still unconfigured and purchases remain Preview. No funding, chain transaction or program deployment occurred.
