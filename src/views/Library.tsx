@@ -1,5 +1,4 @@
 import { useMemo, useRef, useState } from "react";
-import { motion } from "motion/react";
 import type { Go } from "../App";
 import { useStore, split } from "../state/store";
 import { useCatalog, textureFor, thumbFor } from "../state/catalog";
@@ -11,6 +10,7 @@ import { useAct } from "./common";
 import { HOUSE_PALETTE } from "../data/games";
 import { IconLeft, IconRight } from "../ui/Icons";
 import { AGlyph } from "../ui/Logo";
+import { KineticTitle } from "../ui/Kinetic";
 
 const HAND = 7; // cards fanned at once
 
@@ -80,7 +80,7 @@ export function LibraryView({ go, focus }: { go: Go; focus?: string }) {
         <div className="eyebrow">{game!.genre}{mine.length > 1 ? ` · ${cur + 1} of ${mine.length}` : ""}</div>
         <div className="lib-pick">
           {mine.length > 1 ? <button type="button" className="icon-btn" aria-label="Previous game" disabled={cur === 0} onClick={() => pick(cur - 1)}><IconLeft /></button> : <span />}
-          <motion.h1 key={game!.slug} className="title md" initial={{ opacity: .35, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 420, damping: 34 }}>{game!.title}</motion.h1>
+          <div key={game!.slug} className="cue"><KineticTitle text={game!.title} className="title md" /></div>
           {mine.length > 1 ? <button type="button" className="icon-btn" aria-label="Next game" disabled={cur >= mine.length - 1} onClick={() => pick(cur + 1)}><IconRight /></button> : <span />}
         </div>
         {!selling ? (

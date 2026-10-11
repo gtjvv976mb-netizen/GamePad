@@ -1,7 +1,8 @@
 import * as THREE from "three";
 import { FOIL_CELLS, MARK_BODY, MARK_RING } from "../ui/Logo";
 import { coverUrl, type Game } from "../data/games";
-import { reducedMotion } from "../lib/motion";
+import { keepPlaying } from "../lib/media";
+import { saveData } from "../lib/show";
 
 const loader = new THREE.TextureLoader();
 const cache = new Map<string, THREE.Texture>();
@@ -12,21 +13,20 @@ const prep = (t: THREE.Texture) => {
   return t;
 };
 
-export { reducedMotion };
-
 /** Cover texture for a catalog game: the looping clip when it has one, else the still. */
 export function coverTexture(game: Pick<Game, "slug" | "loop">): THREE.Texture {
   const key = game.slug + (game.loop ? ":v" : "");
   const hit = cache.get(key);
   if (hit) return hit;
   let tex: THREE.Texture;
-  if (game.loop && !reducedMotion()) {
+  if (game.loop && !saveData()) {
     const v = document.createElement("video");
     const webm = v.canPlayType('video/webm; codecs="vp9"');
     v.src = `./loops/${game.slug}.${webm ? "webm" : "mp4"}`;
     v.muted = true; v.loop = true; v.playsInline = true; v.crossOrigin = "anonymous"; v.preload = "auto";
     v.poster = coverUrl(game.slug);
-    v.play().catch(() => { /* autoplay blocked: the poster frame still shows once loaded */ });
+    // plays while motion is on; a phone that blocks autoplay starts it on the first tap
+    keepPlaying(v);
     tex = prep(new THREE.VideoTexture(v));
   } else {
     tex = prep(loader.load(coverUrl(game.slug)));

@@ -38,11 +38,27 @@ Wallets connect through wagmi and viem: any installed browser wallet (MetaMask, 
 - React 19, TypeScript, Vite.
 - 3D: three.js with @react-three/fiber and drei. A custom shader for the holographic foil. Resolution steps down on slower GPUs, and without WebGL (or with `?no3d`) the stage falls back to CSS.
 - The logo is a pixel mark: a controller on a 16 by 10 grid, with two foil cells for the face buttons. The flat mark is an SVG drawn at a whole number of screen pixels per cell, so it stays sharp. In 3D each pixel is a stack of two cubes, and the two foil cubes hop around the hub between the face buttons.
-- Motion: Motion (Framer Motion) for tab and sheet transitions. Reduced-motion settings are respected.
+- Motion: CSS for the interface choreography, Motion (Framer Motion) for tab and sheet transitions, and the 3D layer for the card, the voxels and the camera. See [Motion](#motion).
 - Web3: wagmi 2, viem 2, and the `GamePadStore` ERC-1155 contract in [contracts/](contracts/) with royalty-enforcing resale.
 - Fonts: Big Shoulders Display, Manrope and JetBrains Mono, self-hosted.
-- Cover art, the short cover loops (all 16 games) and the background clip were generated with Higgsfield. The background is a seamless 9.5 second loop (VP9 WebM with an H.264 fallback, a portrait cut for phones); with Reduce motion or Data Saver on it shows its first frame instead.
+- Cover art, the short cover loops (all 16 games) and the background clip were generated with Higgsfield. The background is a seamless 9.5 second loop (VP9 WebM with an H.264 fallback, a portrait cut for phones); with Data Saver on, or the stop button pressed, it shows its first frame instead. The first visit of a session opens with a second Higgsfield clip, a 5 second fly-in through a warp tunnel that lands on the loop's first frame (`public/world/intro-*`).
 - Design tokens and the UI parts are mirrored in the GamePad Brand Board Figma file, on the "GamePad v3 · real app" page; the pixel mark is not there yet.
+
+## Motion
+
+The site moves in one of three modes, set on `<html data-motion>` by [src/lib/motion.ts](src/lib/motion.ts):
+
+| Mode | Who | What moves |
+|---|---|---|
+| `full` | everyone by default | everything: the fly-in, the interface arriving in sequence, the 3D card swoop and flips, voxel bursts, camera parallax, glints, the hero carousel |
+| `calm` | devices set to reduce motion | the world clip, the cover loops, the floating 3D card and voxels, copy that fades in; no fly-in, flips, bursts, glints, parallax or carousel |
+| `off` | anyone who presses the stop button (top right) | nothing; every clip rests on a still. The choice is remembered in `localStorage` |
+
+`WHEN_REDUCED` in `src/lib/motion.ts` decides what a reduce-motion device gets (`calm` now; `full` would give it everything).
+
+The first visit of a session plays the fly-in ([src/ui/World.tsx](src/ui/World.tsx)); at 2.5 s, as the camera bursts out of the warp, the interface comes in and the 3D card swoops into place ([src/lib/show.ts](src/lib/show.ts)). Any tap or key skips it, a clip that hasn't started within 1.5 s is skipped, and the interface is in after 6 s whatever happens. `?nointro` skips it (the tests use it). Each change of game is a beat: the card flips with a punch, the voxels burst and spring home, and the title rebuilds letter by letter. After the first game has had 7 s on screen and nobody has touched anything for 6 s, the hero turns to the next game every 7 s; it holds under the pointer, while a sheet or a transaction is open, and when the tab is hidden.
+
+The timeline, the beats, the loops and the easings are drawn on the "Motion v4" board in the Figma file. `e2e/motion.spec.ts` checks the clip plays at full and calm, the stop button stops everything and sticks, a phone that blocks autoplay starts on the first tap, the carousel turns, and the fly-in hands over to the store.
 
 ## Design check
 
