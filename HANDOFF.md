@@ -42,7 +42,7 @@ No new on-chain transaction, program deployment, Pages publication or external a
 
 ## Original offline games continuation
 
-Current branch: `codex/offline-campaign-games`. The user explicitly requested fully working offline games with adventure/campaign and confirmed **all 16 catalog titles**.
+Current branch: `codex/offline-campaign-games`, reviewable draft PR [#5](https://github.com/gtjvv976mb-netizen/GamePad/pull/5). The user explicitly requested fully working offline games with adventure/campaign and confirmed **all 16 catalog titles**.
 
 Implemented 16 original compact single-player games, with 90 authored campaign chapters, local canvas graphics, distinct mechanics, objectives, failure/retry, story progression and endings. Existing catalog slugs, chain IDs, SOL prices and royalty settings are preserved. Catalog copy now describes implemented games rather than the earlier unsupported multiplayer, 60-hour, 200-room and 120-room promises.
 
