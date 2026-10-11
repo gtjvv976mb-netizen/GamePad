@@ -5,8 +5,9 @@
   "type": "module",
   "description": "GamePad: a game store where you own the copy. Buy games with crypto, resell them, and studios earn on every resale.",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
+    "dev": "node scripts/build-offline-games.mjs && vite",
+    "build": "node scripts/build-offline-games.mjs && tsc -b && vite build",
+    "build:games": "node scripts/build-offline-games.mjs",
     "preview": "vite preview",
     "typecheck": "tsc -b",
     "test:e2e": "playwright test"
@@ -33,6 +34,7 @@
     "@types/react-dom": "^19.3.0",
     "@types/three": "^0.186.0",
     "@vitejs/plugin-react": "^4.7.0",
+    "esbuild": "0.25.12",
     "typescript": "^5.9.3",
     "vite": "^6.4.4"
   }

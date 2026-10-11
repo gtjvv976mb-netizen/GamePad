@@ -11,10 +11,12 @@ import { HOUSE_PALETTE } from "../data/games";
 import { IconLeft, IconRight } from "../ui/Icons";
 import { AGlyph } from "../ui/Logo";
 import { KineticTitle } from "../ui/Kinetic";
+import { campaignFor, offlineGameUrl } from "../games/campaigns";
+import type { PlayGame } from "../games/GamePlayer";
 
 const HAND = 7; // cards fanned at once
 
-export function LibraryView({ go, focus }: { go: Go; focus?: string }) {
+export function LibraryView({ go, focus, play }: { go: Go; focus?: string; play: PlayGame }) {
   const store = useStore();
   const catalog = useCatalog();
   const session = useSession();
@@ -23,6 +25,7 @@ export function LibraryView({ go, focus }: { go: Go; focus?: string }) {
   const [sel, setSel] = useState(() => Math.max(0, mine.findIndex(g => g.slug === focus)));
   const cur = Math.min(sel, Math.max(0, mine.length - 1));
   const game = mine[cur];
+  const campaign = game && campaignFor(game.slug);
   const [price, setPrice] = useState("");
   const [selling, setSelling] = useState(false);
   const sx = useRef(0);
@@ -40,7 +43,8 @@ export function LibraryView({ go, focus }: { go: Go; focus?: string }) {
   useNav(a => {
     if (a === "left") pick(cur - 1);
     else if (a === "right") pick(cur + 1);
-    else if (a === "confirm" && game && !selling) startSell();
+    else if (a === "confirm" && game && !selling) { if (campaign) play(game.slug); else startSell(); }
+    else if (a === "alt" && game && !selling) startSell();
     else if (a === "back" && selling) setSelling(false);
   });
 
@@ -84,10 +88,17 @@ export function LibraryView({ go, focus }: { go: Go; focus?: string }) {
           {mine.length > 1 ? <button type="button" className="icon-btn" aria-label="Next game" disabled={cur >= mine.length - 1} onClick={() => pick(cur + 1)}><IconRight /></button> : <span />}
         </div>
         {!selling ? (
-          <div className="actions center">
-            <button className="btn primary" onClick={startSell}><AGlyph />{copies > 1 ? `Sell 1 of ${copies}` : "Sell this copy"}</button>
-            <button className="btn noglyph" onClick={() => go("store", game!.slug)}>Store page</button>
-          </div>
+          <>
+            {campaign && <p className="campaign-note">Single-player · {campaign.chapters.length} chapters · Play here or download for offline</p>}
+            {campaign && <div className="actions center offline-actions">
+              <button className="btn primary" aria-label="Play campaign" onClick={() => play(game!.slug)}><AGlyph />Play campaign</button>
+              <a className="btn noglyph" href={offlineGameUrl(game!.slug)} download={`${game!.slug}-gamepad-offline.html`}>Download offline</a>
+            </div>}
+            <div className={`actions center ${campaign ? "offline-secondary" : ""}`}>
+              <button className={`btn ${campaign ? "noglyph" : "primary"}`} onClick={startSell}>{!campaign && <AGlyph />}{copies > 1 ? `Sell 1 of ${copies}` : "Sell this copy"}</button>
+              <button className="btn noglyph" onClick={() => go("store", game!.slug)}>Store page</button>
+            </div>
+          </>
         ) : (
           <form className="actions center" onSubmit={e => {
             e.preventDefault();

@@ -22,6 +22,7 @@ import { useNarrow } from "./views/common";
 import { GAMES } from "./data/games";
 import { coverTexture } from "./three/textures";
 import { calm } from "./three/color";
+import { GamePlayer, type GameLaunch } from "./games/GamePlayer";
 
 export type Tab = "store" | "market" | "library" | "studio" | "profile";
 const TABS: { id: Tab; label: string; icon: ReactNode }[] = [
@@ -38,6 +39,9 @@ export type Go = (tab: Tab, focus?: string) => void;
 export default function App() {
   const [tab, setTab] = useState<Tab>(fromHash);
   const [focus, setFocus] = useState<string | undefined>();
+  const [playing, setPlaying] = useState<GameLaunch | null>(null);
+  const play = useCallback((slug: string, demo = false) => setPlaying({ slug, demo }), []);
+  const closeGame = useCallback(() => setPlaying(null), []);
   const first = GAMES[1];
   const [scene, setScene] = useState<Scene>(() => ({ kind: "card", texture: coverTexture(first), key: first.slug, palette: first.palette, side: "right" }));
   const pad = usePad();
@@ -87,11 +91,11 @@ export default function App() {
 
   return (
     <SceneCtx.Provider value={setScene}>
-      <World tint={calm(scene.palette[2])} />
-      <Stage scene={scene} />
+      {!playing && <World tint={calm(scene.palette[2])} />}
+      {!playing && <Stage scene={scene} />}
       <div className="shade" />
       {/* hidden while the fly-in runs; then the rail, top bar, hero and shelf arrive one after another */}
-      <div className={`app ${arrived ? "in" : "pre"}`} inert={!!store.busy || session.sheetOpen || !arrived || undefined}>
+      <div className={`app ${arrived ? "in" : "pre"}`} inert={!!playing || !!store.busy || session.sheetOpen || !arrived || undefined}>
         <button className="btn sm skip" onClick={() => document.getElementById("main")?.focus()}>Skip to content</button>
         <nav className="rail" aria-label="GamePad">
           <HomeMark onClick={() => go("store")} />
@@ -117,9 +121,9 @@ export default function App() {
               <AnimatePresence>
                 <View key={tab}>
                   {(tab === "market" || tab === "studio" || tab === "profile") && <h1 className="sr">{label}</h1>}
-                  {tab === "store" && <StoreView go={go} focus={focus} />}
+                  {tab === "store" && <StoreView go={go} focus={focus} play={play} suspended={!!playing} />}
                   {tab === "market" && <MarketView go={go} focus={focus} />}
-                  {tab === "library" && <LibraryView go={go} focus={focus} />}
+                  {tab === "library" && <LibraryView go={go} focus={focus} play={play} />}
                   {tab === "studio" && <StudioView go={go} />}
                   {tab === "profile" && <ProfileView />}
                 </View>
@@ -136,6 +140,7 @@ export default function App() {
         )}
       </AnimatePresence>
       <p className="sr" role="status" aria-live="polite">{store.busy ? `${store.busy}…` : ""}</p>
+      {playing && <GamePlayer launch={playing} close={closeGame} />}
     </SceneCtx.Provider>
   );
 }

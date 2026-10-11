@@ -13,10 +13,12 @@ import { bigMotion } from "../lib/motion";
 import { arrivedAt, idleFor, kick, now } from "../lib/show";
 import { useSession } from "../web3/session";
 import { useAct, useFit, useNarrow } from "./common";
+import { campaignFor } from "../games/campaigns";
+import type { PlayGame } from "../games/GamePlayer";
 
 const KEY = "gamepad-sel";
 
-export function StoreView({ go, focus }: { go: Go; focus?: string }) {
+export function StoreView({ go, focus, play, suspended }: { go: Go; focus?: string; play: PlayGame; suspended: boolean }) {
   const catalog = useCatalog();
   const store = useStore();
   const act = useAct();
@@ -33,6 +35,7 @@ export function StoreView({ go, focus }: { go: Go; focus?: string }) {
     if (i >= 0) { focusedSlug.current = focus; setSel(i); }
   }, [focus, catalog]);
   const game = catalog[sel] ?? catalog[0];
+  const campaign = campaignFor(game.slug);
   const tilesRef = useRef<HTMLDivElement>(null);
   const refocus = useRef(false);
   const per = useFit(tilesRef, "x", 3, 10, narrow);
@@ -62,7 +65,7 @@ export function StoreView({ go, focus }: { go: Go; focus?: string }) {
   const session = useSession();
   const holding = useRef(false);
   const blocked = useRef(false);
-  blocked.current = !!store.busy || session.sheetOpen;
+  blocked.current = suspended || !!store.busy || session.sheetOpen;
   useEffect(() => {
     let t = 0;
     const tick = () => {
@@ -107,6 +110,7 @@ export function StoreView({ go, focus }: { go: Go; focus?: string }) {
           <div className="eyebrow" style={{ "--k": 0 } as CSSProperties}>{game.genre} · {game.studio}</div>
           <KineticTitle text={game.title} />
           <p className="blurb" style={{ "--k": 3 } as CSSProperties}>{game.blurb}</p>
+          {campaign && <p className="campaign-note">Original offline campaign · {campaign.chapters.length} chapters · Single-player</p>}
           {(game.price > 0 || game.royaltyPct > 0 || floor !== null) && (
             <dl className="facts" style={{ "--k": 4 } as CSSProperties}>
               {game.price > 0 && <div className="fact"><dt>Studio gets</dt><dd><Sol v={studioCut} /></dd></div>}
@@ -120,6 +124,7 @@ export function StoreView({ go, focus }: { go: Go; focus?: string }) {
             ? <button className="btn owned-chip" onClick={() => go("library", game.slug)}><span className="glyph">A</span><span>In your library{owned > 1 ? ` ×${owned}` : ""}</span></button>
             : <button className="btn primary" onClick={buy} disabled={game.active === false}><AGlyph />{game.active === false ? "Not on sale" : game.price ? `Buy · ${sol(game.price)}` : "Get it free"}</button>}
           {floor !== null && !owned && <button className="btn" onClick={() => go("market", game.slug)}><span className="glyph">X</span>{used.length} used</button>}
+          {campaign && <button className="btn noglyph" onClick={() => play(game.slug, !owned)}>{owned ? "Play campaign" : "Try first chapter"}</button>}
         </div>
       </section>
 

@@ -8,10 +8,17 @@ export type NavAction = "left" | "right" | "up" | "down" | "confirm" | "back" | 
 
 type Handler = (a: NavAction) => boolean | void;
 const handlers: Handler[] = [];
+let suspended = 0;
+/** A game owns its inputs while open, including across background tab mounts. */
+export function suspendStoreNavigation() {
+  suspended++;
+  return () => { suspended = Math.max(0, suspended - 1); };
+}
 let padName: string | null = null;
 const padListeners = new Set<() => void>();
 
 function emit(a: NavAction) {
+  if (suspended) return;
   noteInput();
   // newest subscriber first, so an open sheet gets input before the tab beneath it
   for (let i = handlers.length - 1; i >= 0; i--) if (handlers[i](a) === true) return;

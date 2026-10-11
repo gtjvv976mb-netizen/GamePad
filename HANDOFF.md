@@ -21,7 +21,7 @@ Recovery status: **partial**. Current GitHub code and the latest Claude UI conte
 
 ## Current continuation
 
-Branch: `codex/gamepad-devnet-readiness`.
+Devnet readiness PR [#4](https://github.com/gtjvv976mb-netizen/GamePad/pull/4) was squash merged at the user's request into `main`, commit `f954f2b3561b9091b4d6bfe5950e79284a49db38`.
 
 The continuation fixes price consent and seed sale terms, retains owned/resale access for inactive games, uses the current on-chain platform fee and prevents superseded refreshes from replacing newer state. Wallet sends verify the RPC's genesis hash before signing.
 
@@ -36,6 +36,18 @@ Local devnet preparation (keys ignored, mode 0600):
 
 Verified locally: production build, all 11 native tests (9 store behavior/security cases plus generated ID and client fixture), SBF build and 40 distinct desktop/phone browser checks (12 intentional skips of duplicate Node/live cases and phone-only limitations). See `verification/README.md` for exact results and the corrected test-harness timeout.
 
-Next external steps require approval: merge the reviewed PR; obtain faucet test SOL for this dedicated wallet; deploy this built program to devnet with the dedicated upgrade authority; initialize and seed 16 games (10% fee, separate studio, treasury above); verify by on-chain read-back; set the repository's `VITE_STORE_PROGRAM_DEVNET` variable; run and verify GitHub Pages publication. The store program is currently absent from devnet.
+Next external steps require approval: obtain faucet test SOL for this dedicated wallet; deploy this built program to devnet with the dedicated upgrade authority; initialize and seed 16 games (10% fee, separate studio, treasury above); verify by on-chain read-back; set the repository's `VITE_STORE_PROGRAM_DEVNET` variable; run and verify GitHub Pages publication. The store program was absent from devnet at the last verification.
 
 No new on-chain transaction, program deployment, Pages publication or external account setting has been performed during this continuation.
+
+## Original offline games continuation
+
+Current branch: `codex/offline-campaign-games`. The user explicitly requested fully working offline games with adventure/campaign and confirmed **all 16 catalog titles**.
+
+Implemented 16 original compact single-player games, with 90 authored campaign chapters, local canvas graphics, distinct mechanics, objectives, failure/retry, story progression and endings. Existing catalog slugs, chain IDs, SOL prices and royalty settings are preserved. Catalog copy now describes implemented games rather than the earlier unsupported multiplayer, 60-hour, 200-room and 120-room promises.
+
+Store offers wallet-free first-chapter trials. Owned Library titles offer full campaign play and a self-contained HTML download. Downloaded games include all code, art and story and do not contact the wallet, chain or any network service. Shared runtime includes keyboard, standard controller and touch input, pause/focus-loss protection, validated exact saves and JSON save export/import. Store navigation and decorative rendering suspend while a game is open.
+
+`npm run build:games` generates the 16 offline files under ignored `public/games/`; the production build copies them to `dist/games/`. Sources and authored chapter content are under `src/games/`. No external game assets or private credentials are included in the downloads.
+
+Validation completed: production build passes; model solvers complete all 90 chapters through actual controls (13 action, 34 adventure and 41 strategy cases). The full local Playwright suite passed 185 checks with 87 intentional skips. Desktop and phone checks cover every local-file game with the network disabled, exact saves, import/export, blocked storage, controller/touch controls, a full campaign ending and Store/Library integration. See `verification/README.md` and the desktop/phone screenshots. This feature has not been merged or published.
