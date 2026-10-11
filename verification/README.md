@@ -34,4 +34,14 @@ The 87 skips comprise 75 duplicate Node model cases on the phone project (34 adv
 
 Screenshots show the full Hollow Crown campaign running inside GamePad: [desktop](gamepad-campaign-desktop.png) and [phone](gamepad-campaign-phone.png).
 
-The on-chain program is unchanged by this feature; its prior native and SBF validation above applies to the merged baseline. No funding, transaction, deployment, Pages publication or account setting was performed for the offline games. Recovery remains partial as recorded in `HANDOFF.md`.
+The on-chain program is unchanged by this feature; its prior native and SBF validation above applies to the merged baseline. Local offline-games development did not perform funding, transactions, deployment, Pages publication or account settings. The later authorized frontend publication is recorded below. Recovery remains partial as recorded in `HANDOFF.md`.
+
+## Live site integration
+
+PR [#5](https://github.com/gtjvv976mb-netizen/GamePad/pull/5) was merged into `main` at source `ceb94e0ff0e2401ef4fade71d3895594d7d26cb5`. The reviewed feature and merged source passed both GitHub CI jobs: 185 browser/model checks (87 intentional skips), native program tests and SBF build. The merged-source CI run is [38150142190](https://github.com/gtjvv976mb-netizen/GamePad/actions/runs/38150142190). Authorized Pages publication [run 38150162564](https://github.com/gtjvv976mb-netizen/GamePad/actions/runs/38150162564) succeeded.
+
+The existing Store/Library integration case was then run against **https://gamedotpad.com/** using isolated desktop and phone browser contexts: 2 passed in 9.9 seconds. Each checked a wallet-free trial, return to Store, simulated Preview purchase, Library launch with all six chapters, offline HTML download with all code inline and the network-blocking CSP, and return focus. Live screenshots: [desktop](gamepad-live-desktop.png) and [phone](gamepad-live-phone.png). The ignored log is `verification/live-pages-integration.log`; the temporary live-test configuration was removed.
+
+An independent HTTP audit fetched the live manifest and all 16 game HTML endpoints successfully. Each was SHA-256-identical to the tested file under `dist/games/`; all game HTML contains inline code/styles and a network-blocking CSP. The published frontend bundle was also checked for the trial, full-play and download controls.
+
+Frontend publication did not configure the store program, change deployment variables or perform on-chain transactions. Purchases remain Preview mode.

@@ -36,13 +36,13 @@ Local devnet preparation (keys ignored, mode 0600):
 
 Verified locally: production build, all 11 native tests (9 store behavior/security cases plus generated ID and client fixture), SBF build and 40 distinct desktop/phone browser checks (12 intentional skips of duplicate Node/live cases and phone-only limitations). See `verification/README.md` for exact results and the corrected test-harness timeout.
 
-Next external steps require approval: obtain faucet test SOL for this dedicated wallet; deploy this built program to devnet with the dedicated upgrade authority; initialize and seed 16 games (10% fee, separate studio, treasury above); verify by on-chain read-back; set the repository's `VITE_STORE_PROGRAM_DEVNET` variable; run and verify GitHub Pages publication. The store program was absent from devnet at the last verification.
+Remaining on-chain and configuration steps require approval: obtain faucet test SOL for this dedicated wallet; deploy this built program to devnet with the dedicated upgrade authority; initialize and seed 16 games (10% fee, separate studio, treasury above); verify by on-chain read-back; set the repository's `VITE_STORE_PROGRAM_DEVNET` variable; publish and verify a build using that on-chain configuration. The store program was absent from devnet at the last verification.
 
-No new on-chain transaction, program deployment, Pages publication or external account setting has been performed during this continuation.
+The devnet readiness work did not perform an on-chain transaction, program deployment or external account setting. The later frontend publication is recorded below.
 
 ## Original offline games continuation
 
-Current branch: `codex/offline-campaign-games`, reviewable draft PR [#5](https://github.com/gtjvv976mb-netizen/GamePad/pull/5). The user explicitly requested fully working offline games with adventure/campaign and confirmed **all 16 catalog titles**.
+PR [#5](https://github.com/gtjvv976mb-netizen/GamePad/pull/5) was squash merged into `main`, source commit `ceb94e0ff0e2401ef4fade71d3895594d7d26cb5`, after the user requested "now integrate it in the site". The user explicitly requested fully working offline games with adventure/campaign and confirmed **all 16 catalog titles**.
 
 Implemented 16 original compact single-player games, with 90 authored campaign chapters, local canvas graphics, distinct mechanics, objectives, failure/retry, story progression and endings. Existing catalog slugs, chain IDs, SOL prices and royalty settings are preserved. Catalog copy now describes implemented games rather than the earlier unsupported multiplayer, 60-hour, 200-room and 120-room promises.
 
@@ -50,4 +50,12 @@ Store offers wallet-free first-chapter trials. Owned Library titles offer full c
 
 `npm run build:games` generates the 16 offline files under ignored `public/games/`; the production build copies them to `dist/games/`. Sources and authored chapter content are under `src/games/`. No external game assets or private credentials are included in the downloads.
 
-Validation completed: production build passes; model solvers complete all 90 chapters through actual controls (13 action, 34 adventure and 41 strategy cases). The full local Playwright suite passed 185 checks with 87 intentional skips. Desktop and phone checks cover every local-file game with the network disabled, exact saves, import/export, blocked storage, controller/touch controls, a full campaign ending and Store/Library integration. See `verification/README.md` and the desktop/phone screenshots. This feature has not been merged or published.
+Validation completed: production build passes; model solvers complete all 90 chapters through actual controls (13 action, 34 adventure and 41 strategy cases). The full local Playwright suite passed 185 checks with 87 intentional skips. Desktop and phone checks cover every local-file game with the network disabled, exact saves, import/export, blocked storage, controller/touch controls, a full campaign ending and Store/Library integration. See `verification/README.md` and the desktop/phone screenshots. The feature is merged and published at https://gamedotpad.com. GitHub CI passed both app and program jobs on the reviewed feature and the merged release source, including 185 browser/model checks and the SBF build.
+
+## Site integration and publication
+
+The user's 11 October request to integrate the games in the site authorized merging the reviewed feature and frontend publication. GitHub Pages run [38150162564](https://github.com/gtjvv976mb-netizen/GamePad/actions/runs/38150162564) succeeded for source `ceb94e0ff0e2401ef4fade71d3895594d7d26cb5`.
+
+Live desktop and phone checks passed the Store first-chapter trial, return to storefront, guest Preview purchase, Library full six-chapter campaign launch, and self-contained HTML download. The existing integration test was run against `https://gamedotpad.com/`: 2 passed in 9.9 seconds. The published manifest and all 16 game HTML files were fetched independently and matched the tested local files by SHA-256. Live screenshots and results are recorded in `verification/README.md`.
+
+No store program or repository deployment variables were configured. Purchasing remains simulated and labeled Preview; published games run locally without a wallet or network service. No funding or on-chain transaction was performed. The remaining devnet steps above still require approval.
